@@ -69,6 +69,36 @@
     await resetDb();
     location.reload();
   }
+
+  const buildSha = __BUILD_SHA__;
+  const buildTime = __BUILD_TIME__;
+  const buildTimeLocal = (() => {
+    try {
+      return new Date(buildTime).toLocaleString();
+    } catch {
+      return buildTime;
+    }
+  })();
+  let refreshing = false;
+
+  async function forceRefresh() {
+    refreshing = true;
+    try {
+      if ('serviceWorker' in navigator) {
+        const regs = await navigator.serviceWorker.getRegistrations();
+        await Promise.all(regs.map((r) => r.unregister()));
+      }
+      if (typeof caches !== 'undefined') {
+        const keys = await caches.keys();
+        await Promise.all(keys.map((k) => caches.delete(k)));
+      }
+    } catch (err) {
+      console.warn('Force refresh cleanup failed:', err);
+    }
+    const url = new URL(location.href);
+    url.searchParams.set('_r', String(Date.now()));
+    location.replace(url.toString());
+  }
 </script>
 
 <div class="space-y-4">
@@ -125,6 +155,21 @@
       </label>
       <button class="btn btn-primary">Save</button>
     </form>
+
+    <div class="card p-4 space-y-3">
+      <h2 class="text-sm font-semibold">Build</h2>
+      <ul class="text-xs space-y-1">
+        <li>Commit: <code class="font-mono">{buildSha}</code></li>
+        <li>Built: <span title={buildTime}>{buildTimeLocal}</span></li>
+      </ul>
+      <button class="btn" on:click={forceRefresh} disabled={refreshing}>
+        {refreshing ? 'Refreshing…' : '↻ Force refresh (clear cache)'}
+      </button>
+      <p class="text-xs text-ink-500">
+        Unregisters any service worker, clears HTTP caches, and reloads with a cache-busting
+        URL. Your local database is preserved.
+      </p>
+    </div>
 
     <div class="card p-4 space-y-3">
       <h2 class="text-sm font-semibold">Database</h2>
