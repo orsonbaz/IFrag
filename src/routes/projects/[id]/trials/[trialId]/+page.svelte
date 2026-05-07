@@ -168,9 +168,16 @@
     expandedCat = expandedCat === n ? null : n;
   }
   let showAllCategories = false;
+  $: settingsVisible = new Set(
+    data.settings?.visibleCategoryNumbers?.length
+      ? data.settings.visibleCategoryNumbers
+      : [targetCategoryNumber]
+  );
   $: visibleCategories = showAllCategories
     ? data.perCategory
-    : data.perCategory.filter((p) => p.category.number === targetCategoryNumber);
+    : data.perCategory.filter(
+        (p) => settingsVisible.has(p.category.number) || p.category.number === targetCategoryNumber
+      );
 
   $: targetVerdict = data.perCategory.find((p) => p.category.number === targetCategoryNumber);
 

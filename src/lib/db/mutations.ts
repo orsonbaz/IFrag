@@ -252,9 +252,19 @@ export function saveSettings(
     defaultCategoryNumber: number;
     defaultUnitDisplay: 'pp1000' | 'pct' | 'grams';
     defaultBatchG: number;
+    visibleCategoryNumbers: number[];
   }
 ) {
+  const visible = args.visibleCategoryNumbers.length
+    ? args.visibleCategoryNumbers.join(',')
+    : String(args.defaultCategoryNumber);
   db.prepare(
-    `UPDATE settings SET default_currency = ?, default_category_number = ?, default_unit_display = ?, default_batch_g = ? WHERE id = 1`
-  ).run(args.defaultCurrency, args.defaultCategoryNumber, args.defaultUnitDisplay, args.defaultBatchG);
+    `UPDATE settings SET default_currency = ?, default_category_number = ?, default_unit_display = ?, default_batch_g = ?, visible_category_numbers = ? WHERE id = 1`
+  ).run(
+    args.defaultCurrency,
+    args.defaultCategoryNumber,
+    args.defaultUnitDisplay,
+    args.defaultBatchG,
+    visible
+  );
 }

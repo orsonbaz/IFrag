@@ -400,12 +400,18 @@ function toMaterial(r: Record<string, unknown>): Material {
 }
 
 function toSettings(r: Record<string, unknown>): Settings {
+  const raw = (r.visible_category_numbers as string | null) ?? '';
+  const visible = raw
+    .split(',')
+    .map((s) => Number(s.trim()))
+    .filter((n) => Number.isFinite(n) && n > 0);
   return {
     id: Number(r.id),
     defaultCurrency: String(r.default_currency),
     defaultCategoryNumber: Number(r.default_category_number),
     defaultUnitDisplay: r.default_unit_display as 'pp1000' | 'pct' | 'grams',
     activeAmendmentId: r.active_amendment_id as number | null,
-    defaultBatchG: Number(r.default_batch_g)
+    defaultBatchG: Number(r.default_batch_g),
+    visibleCategoryNumbers: visible.length > 0 ? visible : [Number(r.default_category_number)]
   };
 }

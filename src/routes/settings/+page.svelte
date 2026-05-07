@@ -5,9 +5,15 @@
   import { saveSettings } from '$lib/db/mutations';
   export let data: PageData;
 
-  let s = { ...data.settings };
+  let s = { ...data.settings, visibleCategoryNumbers: [...data.settings.visibleCategoryNumbers] };
   let importing = false;
   let importMsg = '';
+
+  function toggleVisible(n: number) {
+    s.visibleCategoryNumbers = s.visibleCategoryNumbers.includes(n)
+      ? s.visibleCategoryNumbers.filter((x) => x !== n)
+      : [...s.visibleCategoryNumbers, n].sort((a, b) => a - b);
+  }
 
   async function save() {
     const db = await getDb();
@@ -15,7 +21,8 @@
       defaultCurrency: s.defaultCurrency,
       defaultCategoryNumber: s.defaultCategoryNumber,
       defaultUnitDisplay: s.defaultUnitDisplay,
-      defaultBatchG: s.defaultBatchG
+      defaultBatchG: s.defaultBatchG,
+      visibleCategoryNumbers: s.visibleCategoryNumbers
     });
     await invalidateAll();
   }
@@ -86,6 +93,24 @@
           {/each}
         </select>
       </label>
+      <fieldset class="block text-sm">
+        <legend class="text-ink-600">Visible IFRA categories</legend>
+        <p class="text-xs text-ink-500 mb-1">
+          Categories shown in the trial compliance panel. Pick one or more.
+        </p>
+        <div class="grid grid-cols-2 gap-x-3 gap-y-1 max-h-56 overflow-auto rounded border border-ink-200 p-2">
+          {#each data.categories as c}
+            <label class="inline-flex items-center gap-1.5 text-xs">
+              <input
+                type="checkbox"
+                checked={s.visibleCategoryNumbers.includes(c.number)}
+                on:change={() => toggleVisible(c.number)}
+              />
+              <span><span class="font-mono">{c.code}</span> {c.label}</span>
+            </label>
+          {/each}
+        </div>
+      </fieldset>
       <label class="block text-sm">
         <span class="text-ink-600">Default amount unit</span>
         <select bind:value={s.defaultUnitDisplay} class="input mt-0.5">

@@ -134,6 +134,7 @@ export interface Settings {
   defaultUnitDisplay: 'pp1000' | 'pct' | 'grams';
   activeAmendmentId: number | null;
   defaultBatchG: number;
+  visibleCategoryNumbers: number[];
 }
 
 export type NewMaterial = Omit<Material, 'id' | 'createdAt' | 'updatedAt'> & Partial<Pick<Material, 'id' | 'createdAt' | 'updatedAt'>>;
