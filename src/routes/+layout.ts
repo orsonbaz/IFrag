@@ -10,17 +10,27 @@ import { getDb } from '$lib/db/client';
 import { getActiveAmendmentId, getSettings } from '$lib/db/queries';
 
 export const load: LayoutLoad = async () => {
-  const db = await getDb();
-  const amendmentId = getActiveAmendmentId(db);
-  let amendment: { version: string; isStarter: number } | null = null;
-  if (amendmentId) {
-    const r = db
-      .prepare('SELECT version, is_starter as isStarter FROM ifra_amendments WHERE id = ?')
-      .get(amendmentId);
-    if (r) amendment = { version: String(r.version), isStarter: Number(r.isStarter) };
+  try {
+    const db = await getDb();
+    const amendmentId = getActiveAmendmentId(db);
+    let amendment: { version: string; isStarter: number } | null = null;
+    if (amendmentId) {
+      const r = db
+        .prepare('SELECT version, is_starter as isStarter FROM ifra_amendments WHERE id = ?')
+        .get(amendmentId);
+      if (r) amendment = { version: String(r.version), isStarter: Number(r.isStarter) };
+    }
+    return {
+      amendment,
+      settings: getSettings(db),
+      bootError: null as string | null
+    };
+  } catch (err) {
+    console.error('[ifrag] bootstrap failed:', err);
+    return {
+      amendment: null,
+      settings: null,
+      bootError: (err as Error).message + '\n' + ((err as Error).stack ?? '')
+    };
   }
-  return {
-    amendment,
-    settings: getSettings(db)
-  };
 };

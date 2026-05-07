@@ -51,6 +51,14 @@
     {/if}
   </header>
   <main class="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
-    <slot />
+    {#if data.bootError}
+      <div class="card p-4 bg-red-50 border-red-300 mb-4">
+        <h2 class="font-semibold text-red-900">IFrag failed to start</h2>
+        <p class="text-xs text-red-800 mt-1">The browser DB couldn't initialise. Open DevTools → Console for the full stack trace.</p>
+        <pre class="mt-2 text-xs bg-white p-2 overflow-auto max-h-64 whitespace-pre-wrap">{data.bootError}</pre>
+      </div>
+    {:else}
+      <slot />
+    {/if}
   </main>
 </div>
