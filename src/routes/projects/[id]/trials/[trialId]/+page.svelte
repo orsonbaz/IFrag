@@ -11,6 +11,8 @@
     saveTrial as saveTrialDb
   } from '$lib/db/mutations';
   import { downloadCertificate } from '$lib/pdf/download';
+  import { evaluate } from '$lib/compliance/engine';
+  import type { ComponentInput } from '$lib/compliance/types';
 
   export let data: PageData;
 
@@ -152,14 +154,63 @@
     return 'bg-ink-300';
   }
 
-  function rowTint(r: Row, meta: any) {
-    const failures = (data.perCategory.find((p) => p.category.number === targetCategoryNumber)?.failures ?? []).filter(
-      (f) => f.contributors.some((c) => c.componentId === r.id)
+  // Reactive engine evaluation against in-memory rows so the compliance panel
+  // updates as the user edits parts/dilution/dosage without needing to save first.
+  // For accord materials added in-memory we currently skip recursive expansion;
+  // existing saved accord rows still show correctly via componentMeta-based
+  // standards on first paint, and re-expand properly after Save.
+  $: liveEngineInputs = rows.map<ComponentInput>((r, i) => {
+    const info = data.materialIfraInfo?.get(r.materialId);
+    return {
+      componentId: r.id ?? `new-${r.materialId}-${i}`,
+      materialId: r.materialId,
+      materialName: r.materialName,
+      cas: r.cas,
+      isNatural: r.isNatural,
+      partsPer1000: r.partsPer1000 || 0,
+      dilutionPct: r.dilutionPct ?? 100,
+      directStandards: info?.directStandards ?? [],
+      annexContributions: info?.annexContributions ?? []
+    };
+  });
+  $: liveResult = evaluate({
+    components: liveEngineInputs,
+    targetCategoryNumber,
+    compoundDosagePct,
+    activeCategories: data.categories
+  });
+  $: livePerCategory = data.categories.map((cat) => {
+    const v = liveResult.perCategory.get(cat.number);
+    return {
+      category: cat,
+      status: v?.status ?? 'unknown',
+      failures: v?.failures ?? []
+    };
+  });
+  $: liveDirectStandardsByRowId = new Map(
+    rows.map((r, i) => [
+      r.id ?? `new-${r.materialId}-${i}`,
+      data.materialIfraInfo?.get(r.materialId)?.directStandards ?? []
+    ])
+  );
+  $: liveAnnexCountByRowId = new Map(
+    rows.map((r, i) => [
+      r.id ?? `new-${r.materialId}-${i}`,
+      data.materialIfraInfo?.get(r.materialId)?.annexContributions.length ?? 0
+    ])
+  );
+
+  function rowTint(r: Row, meta: any, idx: number) {
+    const rowKey = r.id ?? `new-${r.materialId}-${idx}`;
+    const failures = (livePerCategory.find((p) => p.category.number === targetCategoryNumber)?.failures ?? []).filter(
+      (f) => f.contributors.some((c) => c.componentId === rowKey)
     );
     if (failures.some((f) => f.severity === 'prohibited')) return 'bg-red-50';
     if (failures.some((f) => f.severity === 'over_limit')) return 'bg-orange-50';
     if (failures.some((f) => f.severity === 'specification')) return 'bg-amber-50';
-    if (meta?.directStandards.length === 0 && meta?.annexCount === 0 && r.cas) return 'bg-ink-50';
+    const directs = liveDirectStandardsByRowId.get(rowKey) ?? [];
+    const annexCount = liveAnnexCountByRowId.get(rowKey) ?? 0;
+    if (directs.length === 0 && annexCount === 0 && r.cas) return 'bg-ink-50';
     return '';
   }
 
@@ -174,12 +225,12 @@
       : [targetCategoryNumber]
   );
   $: visibleCategories = showAllCategories
-    ? data.perCategory
-    : data.perCategory.filter(
+    ? livePerCategory
+    : livePerCategory.filter(
         (p) => settingsVisible.has(p.category.number) || p.category.number === targetCategoryNumber
       );
 
-  $: targetVerdict = data.perCategory.find((p) => p.category.number === targetCategoryNumber);
+  $: targetVerdict = livePerCategory.find((p) => p.category.number === targetCategoryNumber);
 
   const sortedTopCosts = () => {
     return [...rows]
@@ -371,8 +422,10 @@
         </thead>
         <tbody class="divide-y divide-ink-100 bg-white">
           {#each rows as r, i (r.materialId)}
-            {@const meta = data.componentMeta.find((m) => m.componentId === r.id)}
-            <tr class={rowTint(r, meta)}>
+            {@const rowKey = r.id ?? `new-${r.materialId}-${i}`}
+            {@const directs = liveDirectStandardsByRowId.get(rowKey) ?? []}
+            {@const annexCount = liveAnnexCountByRowId.get(rowKey) ?? 0}
+            <tr class={rowTint(r, null, i)}>
               <td class="px-3 py-1.5">
                 <div class="font-medium text-sm flex items-center gap-1.5">
                   {#if r.isAccord}
@@ -393,15 +446,15 @@
                     />
                     <span>% pure</span>
                   </label>
-                  {#if meta?.directStandards.length}
-                    {#each meta.directStandards as s}
+                  {#if directs.length}
+                    {#each directs as s}
                       <span class="badge {s.type === 'prohibition' ? 'badge-fail' : s.type === 'restriction' ? 'badge-warn' : 'badge-unknown'}">
                         {s.type === 'prohibition' ? '⚠ prohibited' : s.type === 'restriction' ? 'restricted' : 'spec'}
                       </span>
                     {/each}
                   {/if}
-                  {#if meta && meta.annexCount > 0}
-                    <span class="badge badge-unknown">{meta.annexCount} annex constituent{meta.annexCount === 1 ? '' : 's'}</span>
+                  {#if annexCount > 0}
+                    <span class="badge badge-unknown">{annexCount} annex constituent{annexCount === 1 ? '' : 's'}</span>
                   {/if}
                 </div>
               </td>
@@ -580,10 +633,10 @@
           </ul>
         </div>
 
-        {#if data.warnings.length > 0}
+        {#if liveResult.warnings.length > 0}
           <div class="text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded p-2 space-y-1">
             <div class="font-semibold">Notes</div>
-            {#each data.warnings as w}
+            {#each liveResult.warnings as w}
               <div>• {w}</div>
             {/each}
           </div>

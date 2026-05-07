@@ -212,6 +212,76 @@ export function loadStandardsByAmendment(
   return { byId, byCas, byName, list: Array.from(byId.values()) };
 }
 
+export interface MaterialIfraInfo {
+  directStandards: StandardRef[];
+  annexContributions: Array<{ standard: StandardRef; contributionPct: number }>;
+}
+
+/**
+ * Loads compliance info for every material so the trial UI can re-evaluate
+ * reactively against in-memory edits without a DB round-trip.
+ */
+export function listMaterialIfraInfo(
+  db: DbAdapter,
+  amendmentId: number
+): Map<number, MaterialIfraInfo> {
+  const { byCas, byName } = loadStandardsByAmendment(db, amendmentId);
+  const out = new Map<number, MaterialIfraInfo>();
+  const materials = db
+    .prepare('SELECT id, cas FROM materials')
+    .all() as unknown as Array<{ id: number; cas: string | null }>;
+  const allLinks = db
+    .prepare('SELECT material_id as materialId, standard_id as standardId FROM material_ifra_links')
+    .all() as unknown as Array<{ materialId: number; standardId: number }>;
+  const linksByMaterial = new Map<number, number[]>();
+  for (const l of allLinks) {
+    const arr = linksByMaterial.get(l.materialId) ?? [];
+    arr.push(l.standardId);
+    linksByMaterial.set(l.materialId, arr);
+  }
+  const allAnnex = db
+    .prepare(
+      `SELECT material_id as materialId, constituent_name as constituentName,
+              constituent_cas as constituentCas, contribution_pct as contributionPct
+         FROM material_annex_contributions`
+    )
+    .all() as unknown as Array<{
+    materialId: number;
+    constituentName: string;
+    constituentCas: string | null;
+    contributionPct: number;
+  }>;
+  const annexByMaterial = new Map<number, typeof allAnnex>();
+  for (const a of allAnnex) {
+    const arr = annexByMaterial.get(a.materialId) ?? [];
+    arr.push(a.materialId === undefined ? a : a);
+    annexByMaterial.set(a.materialId, arr as typeof allAnnex);
+  }
+  const stdById = new Map<number, StandardRef>();
+  for (const s of Array.from(byName.values())) stdById.set(s.id, s);
+  for (const m of materials) {
+    const directStandards: StandardRef[] = [];
+    const linkIds = linksByMaterial.get(m.id) ?? [];
+    for (const sid of linkIds) {
+      const std = stdById.get(sid);
+      if (std) directStandards.push(std);
+    }
+    if (directStandards.length === 0 && m.cas) {
+      const std = byCas.get(m.cas);
+      if (std) directStandards.push(std);
+    }
+    const annexContributions: MaterialIfraInfo['annexContributions'] = [];
+    for (const a of annexByMaterial.get(m.id) ?? []) {
+      const std =
+        (a.constituentCas && byCas.get(a.constituentCas)) ||
+        byName.get(a.constituentName.toLowerCase());
+      if (std) annexContributions.push({ standard: std, contributionPct: a.contributionPct });
+    }
+    out.set(m.id, { directStandards, annexContributions });
+  }
+  return out;
+}
+
 /**
  * Builds engine-ready ComponentInputs for a trial. Accord materials are
  * recursively expanded into their constituent components.

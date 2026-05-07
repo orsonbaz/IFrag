@@ -8,6 +8,7 @@ import {
   getTrial,
   listCategories,
   listEvaluations,
+  listMaterialIfraInfo,
   listMaterials,
   listTrialComponents,
   loadStandardsByAmendment
@@ -38,6 +39,7 @@ export const load: PageLoad = async ({ params }) => {
 
   const amendmentId = getActiveAmendmentId(db);
   const standards = amendmentId ? loadStandardsByAmendment(db, amendmentId) : null;
+  const materialIfraInfo = amendmentId ? listMaterialIfraInfo(db, amendmentId) : new Map();
 
   const accordRow = db
     .prepare('SELECT id, name FROM materials WHERE source_trial_id = ?')
@@ -77,6 +79,7 @@ export const load: PageLoad = async ({ params }) => {
     warnings: result.warnings,
     componentsTotal: result.componentsTotalPp1000,
     componentMeta,
+    materialIfraInfo,
     standardsAvailable: standards ? standards.list.length : 0,
     accord: accordRow ?? null
   };
