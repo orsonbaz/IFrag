@@ -48,11 +48,16 @@
         </p>
       {/if}
     </div>
-    <form method="POST" action="?/newTrial" use:enhance>
-      <input type="hidden" name="versionLabel" value={`v${data.trials.length + 1}`} />
-      <input type="hidden" name="compoundDosagePct" value="20" />
-      <button class="btn btn-primary">+ New trial</button>
-    </form>
+    <div class="flex gap-2">
+      {#if data.trials.length >= 2}
+        <a href={`/projects/${data.project.id}/compare`} class="btn">Compare trials</a>
+      {/if}
+      <form method="POST" action="?/newTrial" use:enhance>
+        <input type="hidden" name="versionLabel" value={`v${data.trials.length + 1}`} />
+        <input type="hidden" name="compoundDosagePct" value="20" />
+        <button class="btn btn-primary">+ New trial</button>
+      </form>
+    </div>
   </div>
 
   {#if data.trials.length === 0}

@@ -31,6 +31,17 @@ For development:
 npm run dev
 ```
 
+## Desktop wrapper (optional)
+
+If you want an app-icon, double-click experience instead of `node ./bin/ifrag.js`, install [Rust](https://rustup.rs) and the platform GTK/webkit dependencies, then:
+
+```bash
+npm run tauri:dev      # development with hot reload
+npm run tauri:build    # produce a packaged native app
+```
+
+Tauri config lives in `src-tauri/`. Drop a 1024×1024 PNG at `src-tauri/icons/icon.png` and run `npx @tauri-apps/cli icon ./src-tauri/icons/icon.png` to generate the platform-specific icon set before the first build.
+
 ## What's in the box
 
 - **Projects** — group related trials.
@@ -38,6 +49,8 @@ npm run dev
 - **Live IFRA matrix** — every active category (Cat 1 through Cat 12 with sub-categories 5A–D, 7A–B, 10A–B, 11A–B) shows pass / warn / fail at the current dosage. Click a row to see which standards are tripped and which materials contribute, including annex contributions from naturals (e.g. citral via Lemongrass, furocoumarins via Bergamot).
 - **Cost** — per gram, per 10g, per 100g of finished compound. Top cost drivers per batch.
 - **Olfactory evaluation log** — stage (top/heart/base/dry-down/overall), elapsed minutes from a reference time, 1–5 rating, free notes.
+- **Side-by-side trial comparison** — pick any subset of a project's trials and diff their ingredient lists with added / removed / changed highlighting, plus a per-category compliance grid.
+- **IFRA conformity certificate** — one-click PDF export per trial. Includes the formula, computed concentrations per category, and the detailed findings if anything fails.
 - **Materials library** — full CRUD, search, filters by natural/synthetic and IFRA-link status. Per-material restricted-constituent editor for naturals.
 - **Materials importer** — drag your existing XLSX or CSV. The importer auto-maps headers (Name, CAS, Supplier, Dilution, Price `13 Euros/KG`, Family, Volatility, Dosage, etc.) and lets you correct the mapping before committing.
 - **IFRA importer** — for when you have the official 51st (or 52nd) Amendment data. Drag a CSV/XLSX with one row per substance and one column per category. Limit cells accept a number (% in finished product), `P` (prohibited), or `NR` (no restriction).

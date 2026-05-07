@@ -204,6 +204,13 @@
         />
         <span class="text-xs text-ink-500">g batch</span>
       {/if}
+      <a
+        href={`/projects/${data.project.id}/trials/${data.trial.id}/certificate`}
+        class="btn"
+        title="Download IFRA conformity certificate as PDF"
+      >
+        ⬇ Certificate (PDF)
+      </a>
       <form
         method="POST"
         action="?/saveAll"
