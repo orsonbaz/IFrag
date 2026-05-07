@@ -89,7 +89,7 @@
         if (!name) { skipped++; continue; }
         if (exists.get(name)) { skipped++; continue; }
         const priceEur = parsePriceEurPerKg(get('priceEurPerKg'));
-        const priceMinor = priceEur != null ? Math.round((priceEur / 1000) * 100) : null;
+        const priceMinor = priceEur != null ? Math.round(priceEur * 100) : null;
         const dilution = parseDilutionPct(get('dilutionPct'));
         const cas = String(get('cas') ?? '').trim() || null;
         const isNaturalCell = get('isNatural');

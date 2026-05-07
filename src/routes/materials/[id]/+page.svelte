@@ -7,7 +7,7 @@
   export let data: PageData;
 
   let m = data.material;
-  let priceEurPerKg: number | '' = m.priceMinor != null ? (m.priceMinor * 1000) / 100 : '';
+  let priceEurPerKg: number | '' = m.priceMinor != null ? m.priceMinor / 100 : '';
 
   let aName = '';
   let aCas = '';

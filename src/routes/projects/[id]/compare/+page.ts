@@ -40,7 +40,8 @@ export const load: PageLoad = async ({ params, url }) => {
       let total = 0;
       for (const c of components) {
         total += c.partsPer1000;
-        if (c.priceMinor != null) totalCostMinor += (c.partsPer1000 / 1000) * 30 * c.priceMinor;
+        if (c.priceMinor != null)
+          totalCostMinor += (c.partsPer1000 / 1000) * (30 / 1000) * c.priceMinor;
       }
       const targetCat = t.targetCategoryNumber ?? project.targetCategoryNumber ?? 4;
       const targetVerdict = result.perCategory.get(targetCat);

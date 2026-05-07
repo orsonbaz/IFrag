@@ -141,7 +141,7 @@ export function runSeed(db: DbAdapter, opts: { force?: boolean } = {}): { seeded
 
     for (const m of materials) {
       const priceMinor =
-        typeof m.priceEurPerKg === 'number' ? Math.round((m.priceEurPerKg / 1000) * 100) : null;
+        typeof m.priceEurPerKg === 'number' ? Math.round(m.priceEurPerKg * 100) : null;
       const r = db
         .prepare(
           `INSERT INTO materials (

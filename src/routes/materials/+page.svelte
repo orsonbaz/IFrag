@@ -149,7 +149,7 @@
             <td class="px-3 py-1.5 text-xs">{m.isAccord ? 'accord' : m.isNatural ? 'natural' : 'synthetic'}</td>
             <td class="px-3 py-1.5 text-xs">{m.family ?? '—'}</td>
             <td class="px-3 py-1.5 text-right text-sm">{m.dilutionPct}%</td>
-            <td class="px-3 py-1.5 text-right text-sm">{m.priceMinor != null ? formatMoney(m.priceMinor * 1000, m.currency) + '/kg' : '—'}</td>
+            <td class="px-3 py-1.5 text-right text-sm">{m.priceMinor != null ? formatMoney(m.priceMinor, m.currency) + '/kg' : '—'}</td>
             <td class="px-3 py-1.5 text-xs">
               {#if m.linkedStandards > 0}
                 <span class="badge badge-warn">{m.linkedStandards} link{m.linkedStandards === 1 ? '' : 's'}</span>

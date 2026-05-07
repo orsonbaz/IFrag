@@ -176,7 +176,7 @@ export interface MaterialUpsert {
 
 export function createMaterial(db: DbAdapter, args: MaterialUpsert): number {
   const priceMinor =
-    args.priceEurPerKg != null ? Math.round((args.priceEurPerKg / 1000) * 100) : null;
+    args.priceEurPerKg != null ? Math.round(args.priceEurPerKg * 100) : null;
   const r = db
     .prepare(
       `INSERT INTO materials (
@@ -198,7 +198,7 @@ export function createMaterial(db: DbAdapter, args: MaterialUpsert): number {
 
 export function updateMaterial(db: DbAdapter, id: number, args: MaterialUpsert) {
   const priceMinor =
-    args.priceEurPerKg != null ? Math.round((args.priceEurPerKg / 1000) * 100) : null;
+    args.priceEurPerKg != null ? Math.round(args.priceEurPerKg * 100) : null;
   db.prepare(
     `UPDATE materials SET name = ?, cas = ?, supplier = ?, price_minor = ?, dilution_pct = ?,
      is_natural = ?, stock_g = ?, notes = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`

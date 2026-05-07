@@ -58,7 +58,7 @@
 
   $: total = rows.reduce((s, r) => s + (r.partsPer1000 || 0), 0);
   $: totalCostMinor = rows.reduce(
-    (s, r) => s + (r.priceMinor != null ? (r.partsPer1000 / 1000) * batchG * r.priceMinor : 0),
+    (s, r) => s + (r.priceMinor != null ? (r.partsPer1000 / 1000) * (batchG / 1000) * r.priceMinor : 0),
     0
   );
 
@@ -186,7 +186,7 @@
       .filter((r) => r.priceMinor != null)
       .map((r) => ({
         name: r.materialName,
-        costMinor: ((r.partsPer1000 / 1000) * batchG * (r.priceMinor as number))
+        costMinor: ((r.partsPer1000 / 1000) * (batchG / 1000) * (r.priceMinor as number))
       }))
       .sort((a, b) => b.costMinor - a.costMinor)
       .slice(0, 5);
@@ -266,19 +266,19 @@
 </script>
 
 <div class="space-y-4">
-  <div class="flex items-start justify-between gap-4">
-    <div>
+  <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+    <div class="min-w-0">
       <a href={`${base}/projects/${data.project.id}`} class="text-xs text-ink-500 hover:underline">
         ← {data.project.name}
       </a>
       <input
         bind:value={versionLabel}
-        class="input mt-1 text-2xl font-bold"
-        style="width: auto; min-width: 12ch"
+        class="input mt-1 text-2xl font-bold w-full sm:w-auto"
+        style="min-width: 12ch"
       />
     </div>
-    <div class="flex items-center gap-2">
-      <div class="text-xs text-ink-500">
+    <div class="flex flex-wrap items-center gap-2">
+      <div class="text-xs text-ink-500 whitespace-nowrap">
         Total: <strong class:text-red-600={Math.abs(total - 1000) > 0.5}>{formatPp1000(total)}</strong> / 1000
       </div>
       <select bind:value={displayUnit} class="input text-xs" style="width:auto">
@@ -299,17 +299,17 @@
       {/if}
       <button
         type="button"
-        class="btn"
+        class="btn whitespace-nowrap"
         on:click={promoteAccord}
         title="Make this trial usable as a single ingredient in other trials"
       >
-        {data.accord ? '↻ Update accord' : '☆ Save as Accord'}
+        {data.accord ? '↻ Update accord' : '☆ Accord'}
       </button>
-      <button type="button" class="btn" on:click={downloadCert} title="Download IFRA conformity certificate as PDF">
-        ⬇ Certificate (PDF)
+      <button type="button" class="btn whitespace-nowrap" on:click={downloadCert} title="Download IFRA conformity certificate as PDF">
+        ⬇ PDF
       </button>
-      <button class="btn btn-primary" disabled={saving} on:click={saveAll}>
-        {saving ? 'Saving…' : dirty ? 'Save changes' : 'Saved'}
+      <button class="btn btn-primary whitespace-nowrap" disabled={saving} on:click={saveAll}>
+        {saving ? 'Saving…' : dirty ? 'Save' : 'Saved'}
       </button>
     </div>
   </div>
@@ -416,7 +416,7 @@
                 />
               </td>
               <td class="px-3 py-1.5 text-right text-sm text-ink-600">
-                {formatMoney(r.priceMinor != null ? Math.round((r.partsPer1000 / 1000) * batchG * r.priceMinor) : null, r.currency)}
+                {formatMoney(r.priceMinor != null ? Math.round((r.partsPer1000 / 1000) * (batchG / 1000) * r.priceMinor) : null, r.currency)}
               </td>
               <td class="px-3 py-1.5">
                 <input
