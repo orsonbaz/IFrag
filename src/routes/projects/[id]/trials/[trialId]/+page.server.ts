@@ -40,6 +40,11 @@ export const load: PageServerLoad = async ({ params }) => {
   const amendmentId = getActiveAmendmentId();
   const standards = amendmentId ? loadStandardsByAmendment(amendmentId) : null;
 
+  const sqlite = getSqlite();
+  const accordRow = sqlite
+    .prepare(`SELECT id, name FROM materials WHERE source_trial_id = ?`)
+    .get(trialId) as { id: number; name: string } | undefined;
+
   // Build a serialisable per-category verdict.
   const perCategory = categories.map((cat) => {
     const v = result.perCategory.get(cat.number);
@@ -76,7 +81,8 @@ export const load: PageServerLoad = async ({ params }) => {
     warnings: result.warnings,
     componentsTotal: result.componentsTotalPp1000,
     componentMeta,
-    standardsAvailable: standards ? standards.list.length : 0
+    standardsAvailable: standards ? standards.list.length : 0,
+    accord: accordRow ?? null
   };
 };
 
@@ -144,5 +150,31 @@ export const actions: Actions = {
     const db = getDb();
     db.delete(schema.evaluations).where(eq(schema.evaluations.id, id)).run();
     return { ok: true };
+  },
+
+  promoteToAccord: async ({ params, request }) => {
+    const trialId = Number(params.trialId);
+    const data = await request.formData();
+    const accordName = String(data.get('accordName') ?? '').trim();
+    if (!accordName) return fail(400, { error: 'Accord name required' });
+    const sqlite = getSqlite();
+    const existing = sqlite
+      .prepare(`SELECT id FROM materials WHERE source_trial_id = ?`)
+      .get(trialId) as { id: number } | undefined;
+    if (existing) {
+      sqlite
+        .prepare(`UPDATE materials SET name = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`)
+        .run(accordName, existing.id);
+      return { ok: true, accordMaterialId: existing.id, updated: true };
+    }
+    const result = sqlite
+      .prepare(
+        `INSERT INTO materials (
+          name, cas, supplier, currency, dilution_pct, is_natural, is_accord, source_trial_id,
+          notes
+        ) VALUES (?, NULL, NULL, 'EUR', 100, 0, 1, ?, ?) RETURNING id`
+      )
+      .get(accordName, trialId, `Accord — derived from trial #${trialId}`) as { id: number };
+    return { ok: true, accordMaterialId: result.id, updated: false };
   }
 };

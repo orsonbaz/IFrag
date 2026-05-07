@@ -4,13 +4,18 @@
   import { formatMoney } from '$lib/utils/format';
   export let data: PageData;
   let search = '';
-  let filterNatural: 'all' | 'natural' | 'synthetic' = 'all';
+  let filterNatural: 'all' | 'natural' | 'synthetic' | 'accord' = 'all';
   let filterIfra: 'all' | 'linked' | 'unlinked' = 'all';
   let showNew = false;
 
   $: filtered = data.materials
     .filter((m) => m.name.toLowerCase().includes(search.toLowerCase()) || (m.cas ?? '').includes(search))
-    .filter((m) => filterNatural === 'all' || (filterNatural === 'natural') === m.isNatural)
+    .filter((m) => {
+      if (filterNatural === 'all') return true;
+      if (filterNatural === 'accord') return !!m.isAccord;
+      if (m.isAccord) return false;
+      return (filterNatural === 'natural') === m.isNatural;
+    })
     .filter((m) =>
       filterIfra === 'all'
         ? true
@@ -71,6 +76,7 @@
       <option value="all">All types</option>
       <option value="synthetic">Synthetic</option>
       <option value="natural">Natural</option>
+      <option value="accord">Accord</option>
     </select>
     <select bind:value={filterIfra} class="input" style="width:auto">
       <option value="all">Any IFRA status</option>
@@ -98,12 +104,13 @@
           <tr>
             <td class="px-3 py-1.5">
               <a href={`/materials/${m.id}`} class="text-accent-600 hover:underline font-medium">{m.name}</a>
+              {#if m.isAccord}<span class="badge bg-accent-500/15 text-accent-600 ml-1">📦 accord</span>{/if}
               {#if m.descriptor1 || m.descriptor2}
                 <div class="text-xs text-ink-500">{[m.descriptor1, m.descriptor2].filter(Boolean).join(' / ')}</div>
               {/if}
             </td>
             <td class="px-3 py-1.5 text-xs font-mono">{m.cas ?? '—'}</td>
-            <td class="px-3 py-1.5 text-xs">{m.isNatural ? 'natural' : 'synthetic'}</td>
+            <td class="px-3 py-1.5 text-xs">{m.isAccord ? 'accord' : m.isNatural ? 'natural' : 'synthetic'}</td>
             <td class="px-3 py-1.5 text-xs">{m.family ?? '—'}</td>
             <td class="px-3 py-1.5 text-right text-sm">{m.dilutionPct}%</td>
             <td class="px-3 py-1.5 text-right text-sm">{m.priceMinor != null ? formatMoney(m.priceMinor * 1000, m.currency) + '/kg' : '—'}</td>

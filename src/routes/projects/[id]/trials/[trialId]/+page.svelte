@@ -12,6 +12,7 @@
     materialName: string;
     cas: string | null;
     isNatural: boolean;
+    isAccord: boolean;
     partsPer1000: number;
     sortOrder: number;
     note: string | null;
@@ -26,6 +27,7 @@
     materialName: c.materialName,
     cas: c.cas,
     isNatural: !!c.isNatural,
+    isAccord: !!c.isAccord,
     partsPer1000: c.partsPer1000,
     sortOrder: c.sortOrder,
     note: c.note,
@@ -70,6 +72,7 @@
         materialName: m.name,
         cas: m.cas,
         isNatural: !!m.isNatural,
+        isAccord: !!(m as any).isAccord,
         partsPer1000: 0,
         sortOrder: rows.length,
         note: null,
@@ -102,6 +105,7 @@
           materialName: m.name,
           cas: m.cas,
           isNatural: !!m.isNatural,
+          isAccord: !!(m as any).isAccord,
           partsPer1000: remaining,
           sortOrder: rows.length,
           note: 'auto-balance',
@@ -204,6 +208,31 @@
         />
         <span class="text-xs text-ink-500">g batch</span>
       {/if}
+      <form
+        method="POST"
+        action="?/promoteToAccord"
+        use:enhance
+        class="inline"
+        on:submit={(e) => {
+          const proposed = data.accord?.name ?? `${data.project.name} — ${data.trial.versionLabel} accord`;
+          const name = window.prompt(
+            data.accord
+              ? 'Update accord name (already published as a material):'
+              : 'Save this trial as a reusable Accord. It will appear in the materials picker.\nName for the accord:',
+            proposed
+          );
+          if (!name) {
+            e.preventDefault();
+            return;
+          }
+          (e.currentTarget as HTMLFormElement).querySelector<HTMLInputElement>('[name=accordName]')!.value = name;
+        }}
+      >
+        <input type="hidden" name="accordName" value="" />
+        <button class="btn" title="Make this trial usable as a single ingredient in other trials">
+          {data.accord ? '↻ Update accord' : '☆ Save as Accord'}
+        </button>
+      </form>
       <a
         href={`/projects/${data.project.id}/trials/${data.trial.id}/certificate`}
         class="btn"
@@ -269,9 +298,11 @@
                       class="w-full text-left px-3 py-1.5 text-sm hover:bg-ink-50"
                       on:click={() => addMaterial(m.id)}
                     >
-                      <div class="flex items-center justify-between">
+                      <div class="flex items-center justify-between gap-2">
                         <span class="truncate">{m.name}</span>
-                        {#if m.isNatural}<span class="text-xs text-ink-500 ml-2">natural</span>{/if}
+                        <span class="text-xs text-ink-500 shrink-0">
+                          {#if m.isAccord}<span class="text-accent-600 font-medium">📦 accord</span>{:else if m.isNatural}natural{/if}
+                        </span>
                       </div>
                       {#if m.cas}<div class="text-xs text-ink-400">CAS {m.cas}</div>{/if}
                     </button>
@@ -297,7 +328,12 @@
             {@const meta = data.componentMeta.find((m) => m.componentId === r.id)}
             <tr class={rowTint(r, meta)}>
               <td class="px-3 py-1.5">
-                <div class="font-medium text-sm">{r.materialName}</div>
+                <div class="font-medium text-sm flex items-center gap-1.5">
+                  {#if r.isAccord}
+                    <span class="badge bg-accent-500/15 text-accent-600" title="Accord — flattens into its constituents for compliance">📦 ACCORD</span>
+                  {/if}
+                  <span>{r.materialName}</span>
+                </div>
                 <div class="flex items-center gap-2 text-xs text-ink-500">
                   {#if r.cas}<span>CAS {r.cas}</span>{/if}
                   {#if r.dilutionPct < 100}

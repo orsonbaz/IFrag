@@ -90,6 +90,8 @@ export const materials = sqliteTable(
     densityGPerMl: real('density_g_per_ml'),
     stockG: real('stock_g'),
     isNatural: integer('is_natural', { mode: 'boolean' }).notNull().default(false),
+    isAccord: integer('is_accord', { mode: 'boolean' }).notNull().default(false),
+    sourceTrialId: integer('source_trial_id'),
     chemicalGroup: text('chemical_group'),
     family: text('family'),
     descriptor1: text('descriptor_1'),

@@ -35,6 +35,7 @@ export function listTrialComponents(trialId: number) {
       `SELECT tc.id, tc.trial_id as trialId, tc.material_id as materialId,
               tc.parts_per_1000 as partsPer1000, tc.sort_order as sortOrder, tc.note,
               m.name as materialName, m.cas, m.is_natural as isNatural,
+              m.is_accord as isAccord, m.source_trial_id as sourceTrialId,
               m.dilution_pct as dilutionPct, m.price_minor as priceMinor, m.currency
        FROM trial_components tc
        JOIN materials m ON m.id = tc.material_id
@@ -51,6 +52,8 @@ export function listTrialComponents(trialId: number) {
     materialName: string;
     cas: string | null;
     isNatural: number;
+    isAccord: number;
+    sourceTrialId: number | null;
     dilutionPct: number;
     priceMinor: number | null;
     currency: string;
@@ -202,45 +205,44 @@ export function loadStandardsByAmendment(amendmentId: number): {
 }
 
 /**
- * Builds engine-ready ComponentInputs for a trial.
+ * Builds engine-ready ComponentInputs for a trial. Accord materials are
+ * recursively expanded into their constituent components (scaled by share).
  */
 export function buildComponentInputs(trialId: number): ComponentInput[] {
-  const components = listTrialComponents(trialId);
   const amendmentId = getActiveAmendmentId();
   if (!amendmentId) return [];
-
   const { byCas, byName } = loadStandardsByAmendment(amendmentId);
   const sqlite = getSqlite();
 
-  return components.map((c) => {
-    const directStandards: StandardRef[] = [];
+  function loadDirectStandards(materialId: number, cas: string | null): StandardRef[] {
     const links = sqlite
-      .prepare(
-        `SELECT standard_id as standardId FROM material_ifra_links
-         WHERE material_id = ?`
-      )
-      .all(c.materialId) as Array<{ standardId: number }>;
+      .prepare(`SELECT standard_id as standardId FROM material_ifra_links WHERE material_id = ?`)
+      .all(materialId) as Array<{ standardId: number }>;
+    const out: StandardRef[] = [];
     for (const l of links) {
       const std = Array.from(byName.values()).find((s) => s.id === l.standardId);
-      if (std) directStandards.push(std);
+      if (std) out.push(std);
     }
-    if (directStandards.length === 0 && c.cas) {
-      const std = byCas.get(c.cas);
-      if (std) directStandards.push(std);
+    if (out.length === 0 && cas) {
+      const std = byCas.get(cas);
+      if (std) out.push(std);
     }
+    return out;
+  }
 
-    const annexRows = sqlite
+  function loadAnnex(materialId: number) {
+    const rows = sqlite
       .prepare(
         `SELECT constituent_name as constituentName, constituent_cas as constituentCas,
                 contribution_pct as contributionPct
          FROM material_annex_contributions WHERE material_id = ?`
       )
-      .all(c.materialId) as Array<{
+      .all(materialId) as Array<{
       constituentName: string;
       constituentCas: string | null;
       contributionPct: number;
     }>;
-    const annexContributions = annexRows
+    return rows
       .map((a) => {
         const std =
           (a.constituentCas && byCas.get(a.constituentCas)) ||
@@ -249,17 +251,129 @@ export function buildComponentInputs(trialId: number): ComponentInput[] {
         return { standard: std, contributionPct: a.contributionPct };
       })
       .filter((x): x is { standard: StandardRef; contributionPct: number } => !!x);
+  }
 
-    return {
-      componentId: c.id,
-      materialId: c.materialId,
-      materialName: c.materialName,
-      cas: c.cas,
-      isNatural: !!c.isNatural,
-      partsPer1000: c.partsPer1000,
-      dilutionPct: c.dilutionPct,
-      directStandards,
-      annexContributions
-    };
-  });
+  const out: ComponentInput[] = [];
+
+  function expand(
+    parentComponentId: number | string,
+    materialId: number,
+    materialName: string,
+    cas: string | null,
+    isNatural: boolean,
+    isAccord: boolean,
+    sourceTrialId: number | null,
+    partsPer1000: number,
+    dilutionPct: number,
+    depth: number
+  ) {
+    if (depth > 6) return; // accord recursion guard
+    if (isAccord && sourceTrialId) {
+      const sub = sqlite
+        .prepare(
+          `SELECT tc.id, tc.material_id as materialId, tc.parts_per_1000 as partsPer1000,
+                  m.name as materialName, m.cas, m.is_natural as isNatural,
+                  m.is_accord as isAccord, m.source_trial_id as sourceTrialId,
+                  m.dilution_pct as dilutionPct
+           FROM trial_components tc
+           JOIN materials m ON m.id = tc.material_id
+           WHERE tc.trial_id = ?`
+        )
+        .all(sourceTrialId) as Array<{
+        id: number;
+        materialId: number;
+        partsPer1000: number;
+        materialName: string;
+        cas: string | null;
+        isNatural: number;
+        isAccord: number;
+        sourceTrialId: number | null;
+        dilutionPct: number;
+      }>;
+      const subTotal = sub.reduce((s, x) => s + x.partsPer1000, 0) || 1;
+      // The accord at `partsPer1000` in the parent represents `partsPer1000` parts of a
+      // mixture whose internal proportions are the source trial. Each sub-component
+      // contributes `partsPer1000 * (sub.partsPer1000 / subTotal)` parts to the parent.
+      for (const sc of sub) {
+        const share = (partsPer1000 * sc.partsPer1000) / subTotal;
+        expand(
+          `${parentComponentId}>${sc.id}`,
+          sc.materialId,
+          sc.materialName,
+          sc.cas,
+          !!sc.isNatural,
+          !!sc.isAccord,
+          sc.sourceTrialId,
+          share,
+          sc.dilutionPct,
+          depth + 1
+        );
+      }
+      return;
+    }
+    out.push({
+      componentId: parentComponentId,
+      materialId,
+      materialName,
+      cas,
+      isNatural,
+      partsPer1000,
+      dilutionPct,
+      directStandards: loadDirectStandards(materialId, cas),
+      annexContributions: loadAnnex(materialId)
+    });
+  }
+
+  const top = listTrialComponents(trialId);
+  for (const c of top) {
+    expand(
+      c.id,
+      c.materialId,
+      c.materialName,
+      c.cas,
+      !!c.isNatural,
+      !!c.isAccord,
+      c.sourceTrialId,
+      c.partsPer1000,
+      c.dilutionPct,
+      0
+    );
+  }
+  return out;
+}
+
+/**
+ * Recursively compute the cost in minor currency units for a parent share of an accord.
+ * Returns null if any component has no price.
+ */
+export function accordCostMinorPerGram(materialId: number, depth = 0): number | null {
+  if (depth > 6) return null;
+  const sqlite = getSqlite();
+  const m = sqlite
+    .prepare(
+      `SELECT id, is_accord as isAccord, source_trial_id as sourceTrialId, price_minor as priceMinor FROM materials WHERE id = ?`
+    )
+    .get(materialId) as { id: number; isAccord: number; sourceTrialId: number | null; priceMinor: number | null } | undefined;
+  if (!m) return null;
+  if (!m.isAccord || !m.sourceTrialId) return m.priceMinor ?? null;
+  const sub = sqlite
+    .prepare(
+      `SELECT tc.material_id as materialId, tc.parts_per_1000 as partsPer1000
+       FROM trial_components tc WHERE tc.trial_id = ?`
+    )
+    .all(m.sourceTrialId) as Array<{ materialId: number; partsPer1000: number }>;
+  const total = sub.reduce((s, x) => s + x.partsPer1000, 0);
+  if (total === 0) return null;
+  let cost = 0;
+  let hasUnknown = false;
+  for (const sc of sub) {
+    const c = accordCostMinorPerGram(sc.materialId, depth + 1);
+    if (c == null) {
+      hasUnknown = true;
+      continue;
+    }
+    cost += (sc.partsPer1000 / total) * c;
+  }
+  if (hasUnknown && cost === 0) return null;
+  return Math.round(cost);
 }
