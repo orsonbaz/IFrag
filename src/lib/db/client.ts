@@ -9,6 +9,9 @@ import initSqlJs, { type Database, type SqlJsStatic } from 'sql.js';
 import { browser } from '$app/environment';
 import { base } from '$app/paths';
 import { migrations } from './sql/bundled.js';
+// Vite bundles the WASM and gives us a fingerprinted URL we can pass straight
+// to initSqlJs. Avoids any locateFile-vs-base-path mismatch.
+import sqlWasmUrl from 'sql.js/dist/sql-wasm.wasm?url';
 
 const DB_FILENAME = 'ifrag.db';
 const SCHEMA_VERSION_KEY = 'schema_version';
@@ -125,8 +128,14 @@ function makeAdapter(db: Database): DbAdapter {
 
 async function ensureSql(): Promise<SqlJsStatic> {
   if (SQL) return SQL;
+  // sqlWasmUrl is an absolute URL Vite emitted for the bundled WASM.
+  // Some sql.js builds also probe `<file>` relative paths, so for the rare
+  // fallback fetches we point at the static copy in /static.
   SQL = await initSqlJs({
-    locateFile: (file) => `${base}/${file}`
+    locateFile: (file) => {
+      if (file.endsWith('.wasm')) return sqlWasmUrl;
+      return `${base}/${file}`;
+    }
   });
   return SQL;
 }
