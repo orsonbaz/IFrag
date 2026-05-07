@@ -1,54 +1,92 @@
 <script lang="ts">
-  import { enhance } from '$app/forms';
+  import { invalidateAll } from '$app/navigation';
+  import { base } from '$app/paths';
   import type { PageData } from './$types';
+  import { getDb } from '$lib/db/client';
+  import { addAnnex, deleteAnnex, updateMaterial } from '$lib/db/mutations';
   export let data: PageData;
+
+  let m = data.material;
+  let priceEurPerKg: number | '' = m.priceMinor != null ? (m.priceMinor * 1000) / 100 : '';
+
+  let aName = '';
+  let aCas = '';
+  let aPct: number | '' = '';
+
+  async function save() {
+    const db = await getDb();
+    updateMaterial(db, m.id, {
+      name: m.name.trim(),
+      cas: (m.cas ?? '').trim() || null,
+      supplier: (m.supplier ?? '').trim() || null,
+      priceEurPerKg: priceEurPerKg === '' ? null : Number(priceEurPerKg),
+      dilutionPct: Number(m.dilutionPct ?? 100),
+      isNatural: !!m.isNatural,
+      stockG: m.stockG ?? null,
+      notes: m.notes
+    });
+    await invalidateAll();
+  }
+
+  async function addAnnexRow() {
+    if (!aName.trim() || aPct === '') return;
+    const db = await getDb();
+    addAnnex(db, m.id, {
+      constituentName: aName.trim(),
+      constituentCas: aCas.trim() || null,
+      contributionPct: Number(aPct)
+    });
+    aName = aCas = '';
+    aPct = '';
+    await invalidateAll();
+  }
+
+  async function removeAnnexRow(id: number) {
+    const db = await getDb();
+    deleteAnnex(db, id);
+    await invalidateAll();
+  }
 </script>
 
 <div class="space-y-4">
-  <a href="/materials" class="text-xs text-ink-500 hover:underline">← All materials</a>
-  <h1 class="text-2xl font-bold tracking-tight">{data.material.name}</h1>
+  <a href={`${base}/materials`} class="text-xs text-ink-500 hover:underline">← All materials</a>
+  <h1 class="text-2xl font-bold tracking-tight">{m.name}</h1>
 
   <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
-    <form method="POST" action="?/update" use:enhance class="card p-4 space-y-3">
+    <form on:submit|preventDefault={save} class="card p-4 space-y-3">
       <h2 class="text-sm font-semibold">Properties</h2>
       <label class="block text-sm">
         <span class="text-ink-600">Name</span>
-        <input name="name" required value={data.material.name} class="input mt-0.5" />
+        <input bind:value={m.name} required class="input mt-0.5" />
       </label>
       <label class="block text-sm">
         <span class="text-ink-600">CAS</span>
-        <input name="cas" value={data.material.cas ?? ''} class="input mt-0.5" />
+        <input bind:value={m.cas} class="input mt-0.5" />
       </label>
       <label class="block text-sm">
         <span class="text-ink-600">Supplier</span>
-        <input name="supplier" value={data.material.supplier ?? ''} class="input mt-0.5" />
+        <input bind:value={m.supplier} class="input mt-0.5" />
       </label>
       <div class="grid grid-cols-2 gap-3">
         <label class="block text-sm">
           <span class="text-ink-600">Dilution %</span>
-          <input name="dilutionPct" type="number" step="0.1" value={data.material.dilutionPct} class="input mt-0.5" />
+          <input bind:value={m.dilutionPct} type="number" step="0.1" class="input mt-0.5" />
         </label>
         <label class="block text-sm">
           <span class="text-ink-600">Price € / kg</span>
-          <input
-            name="priceEurPerKg"
-            type="number"
-            step="0.01"
-            value={data.material.priceMinor != null ? (data.material.priceMinor * 1000) / 100 : ''}
-            class="input mt-0.5"
-          />
+          <input bind:value={priceEurPerKg} type="number" step="0.01" class="input mt-0.5" />
         </label>
       </div>
       <label class="block text-sm">
         <span class="text-ink-600">Stock (g)</span>
-        <input name="stockG" type="number" step="0.1" value={data.material.stockG ?? ''} class="input mt-0.5" />
+        <input bind:value={m.stockG} type="number" step="0.1" class="input mt-0.5" />
       </label>
       <label class="block text-sm">
         <span class="text-ink-600">Notes</span>
-        <textarea name="notes" rows="3" class="input mt-0.5">{data.material.notes ?? ''}</textarea>
+        <textarea bind:value={m.notes} rows="3" class="input mt-0.5"></textarea>
       </label>
       <label class="flex items-center gap-2 text-sm">
-        <input name="isNatural" type="checkbox" checked={data.material.isNatural} />
+        <input bind:checked={m.isNatural} type="checkbox" />
         <span>Natural (essential oil, absolute, etc.)</span>
       </label>
       <button class="btn btn-primary">Save</button>
@@ -82,17 +120,14 @@
               {#if a.constituentCas}<span class="text-xs text-ink-400">CAS {a.constituentCas}</span>{/if}
               <span class="ml-2 text-xs text-ink-500">{a.contributionPct}%</span>
             </span>
-            <form method="POST" action="?/removeAnnex" use:enhance>
-              <input type="hidden" name="id" value={a.id} />
-              <button class="text-xs text-ink-400 hover:text-red-600">remove</button>
-            </form>
+            <button class="text-xs text-ink-400 hover:text-red-600" on:click={() => removeAnnexRow(a.id)}>remove</button>
           </li>
         {/each}
       </ul>
-      <form method="POST" action="?/addAnnex" use:enhance class="grid grid-cols-3 gap-2">
-        <input name="constituentName" required placeholder="Constituent name" class="input text-sm col-span-2" />
-        <input name="contributionPct" type="number" step="0.01" min="0" max="100" required placeholder="%" class="input text-sm" />
-        <input name="constituentCas" placeholder="CAS (optional)" class="input text-sm col-span-2" />
+      <form on:submit|preventDefault={addAnnexRow} class="grid grid-cols-3 gap-2">
+        <input bind:value={aName} required placeholder="Constituent name" class="input text-sm col-span-2" />
+        <input bind:value={aPct} type="number" step="0.01" min="0" max="100" required placeholder="%" class="input text-sm" />
+        <input bind:value={aCas} placeholder="CAS (optional)" class="input text-sm col-span-2" />
         <button class="btn">+ Add</button>
       </form>
     </div>

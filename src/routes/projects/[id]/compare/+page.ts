@@ -1,36 +1,35 @@
-import type { PageServerLoad } from './$types';
+import type { PageLoad } from './$types';
 import { error } from '@sveltejs/kit';
+import { getDb } from '$lib/db/client';
 import {
+  buildComponentInputs,
   getProject,
-  listTrials,
-  listTrialComponents,
   listCategories,
-  buildComponentInputs
+  listTrialComponents,
+  listTrials
 } from '$lib/db/queries';
 import { evaluate } from '$lib/compliance/engine';
 
-export const load: PageServerLoad = async ({ params, url }) => {
+export const load: PageLoad = async ({ params, url }) => {
   const projectId = Number(params.id);
-  const project = getProject(projectId);
+  const db = await getDb();
+  const project = getProject(db, projectId);
   if (!project) throw error(404, 'Project not found');
 
-  const allTrials = listTrials(projectId);
+  const allTrials = listTrials(db, projectId);
   const idsParam = url.searchParams.get('ids');
   const selectedIds = idsParam
-    ? idsParam
-        .split(',')
-        .map((s) => Number(s))
-        .filter((n) => !isNaN(n))
+    ? idsParam.split(',').map((s) => Number(s)).filter((n) => !isNaN(n))
     : allTrials.map((t) => t.id);
 
-  const categories = listCategories();
+  const categories = listCategories(db);
 
   const trials = selectedIds
     .map((id) => allTrials.find((t) => t.id === id))
     .filter((t): t is NonNullable<typeof t> => !!t)
     .map((t) => {
-      const components = listTrialComponents(t.id);
-      const engineInputs = buildComponentInputs(t.id);
+      const components = listTrialComponents(db, t.id);
+      const engineInputs = buildComponentInputs(db, t.id);
       const result = evaluate({
         components: engineInputs,
         targetCategoryNumber: t.targetCategoryNumber ?? project.targetCategoryNumber ?? 4,
@@ -41,9 +40,7 @@ export const load: PageServerLoad = async ({ params, url }) => {
       let total = 0;
       for (const c of components) {
         total += c.partsPer1000;
-        if (c.priceMinor != null) {
-          totalCostMinor += (c.partsPer1000 / 1000) * 30 * c.priceMinor;
-        }
+        if (c.priceMinor != null) totalCostMinor += (c.partsPer1000 / 1000) * 30 * c.priceMinor;
       }
       const targetCat = t.targetCategoryNumber ?? project.targetCategoryNumber ?? 4;
       const targetVerdict = result.perCategory.get(targetCat);
@@ -61,11 +58,8 @@ export const load: PageServerLoad = async ({ params, url }) => {
       };
     });
 
-  // Build a unified material set for the comparison rows.
-  const allMaterialIds = new Set<number>();
-  for (const t of trials) for (const c of t.components) allMaterialIds.add(c.materialId);
-  const materialOrder: Array<{ id: number; name: string; cas: string | null; isNatural: boolean }> = [];
   const seen = new Set<number>();
+  const materialOrder: Array<{ id: number; name: string; cas: string | null; isNatural: boolean }> = [];
   for (const t of trials) {
     for (const c of t.components) {
       if (!seen.has(c.materialId)) {

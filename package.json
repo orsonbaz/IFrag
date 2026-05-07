@@ -3,14 +3,8 @@
   "version": "0.1.0",
   "description": "Local fragrance formulation tool with live IFRA compliance checking",
   "type": "module",
-  "bin": {
-    "ifrag": "./bin/ifrag.js"
-  },
   "files": [
-    "bin",
-    "build",
-    "migrations",
-    "seed"
+    "build"
   ],
   "scripts": {
     "dev": "vite dev",
@@ -20,20 +14,16 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "db:generate": "drizzle-kit generate",
-    "start": "node ./bin/ifrag.js",
     "tauri": "tauri",
     "tauri:dev": "tauri dev",
     "tauri:build": "tauri build"
   },
   "dependencies": {
-    "@sveltejs/adapter-node": "^5.2.12",
-    "better-sqlite3": "^11.7.0",
+    "@sveltejs/adapter-static": "^3.0.10",
     "decimal.js": "^10.4.3",
-    "drizzle-orm": "^0.36.4",
-    "get-port": "^7.1.0",
-    "open": "^10.1.0",
     "papaparse": "^5.4.1",
     "pdf-lib": "^1.17.1",
+    "sql.js": "^1.14.1",
     "xlsx": "https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz",
     "zod": "^3.23.8"
   },
@@ -43,11 +33,10 @@
     "@tailwindcss/forms": "^0.5.9",
     "@tailwindcss/typography": "^0.5.15",
     "@tauri-apps/cli": "^2.11.1",
-    "@types/better-sqlite3": "^7.6.12",
     "@types/node": "^22.10.1",
     "@types/papaparse": "^5.3.15",
+    "@types/sql.js": "^1.4.11",
     "autoprefixer": "^10.4.20",
-    "drizzle-kit": "^0.28.1",
     "postcss": "^8.4.49",
     "svelte": "^5.2.7",
     "svelte-check": "^4.1.1",

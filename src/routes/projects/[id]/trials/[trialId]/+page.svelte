@@ -1,8 +1,16 @@
 <script lang="ts">
-  import { enhance } from '$app/forms';
   import { invalidateAll } from '$app/navigation';
+  import { base } from '$app/paths';
   import type { PageData } from './$types';
   import { formatPp1000, formatPct, formatMoney } from '$lib/utils/format';
+  import { getDb } from '$lib/db/client';
+  import {
+    addEvaluation as addEvaluationDb,
+    deleteEvaluation as deleteEvaluationDb,
+    promoteToAccord as promoteToAccordDb,
+    saveTrial as saveTrialDb
+  } from '$lib/db/mutations';
+  import { downloadCertificate } from '$lib/pdf/download';
 
   export let data: PageData;
 
@@ -174,12 +182,81 @@
   };
 
   let saving = false;
+
+  // Stage form for evaluations
+  let evalStage: 'top' | 'heart' | 'base' | 'drydown' | 'overall' = 'top';
+  let evalElapsed = '';
+  let evalRating = '';
+  let evalNotes = '';
+
+  async function saveAll() {
+    saving = true;
+    try {
+      const db = await getDb();
+      saveTrialDb(db, data.trial.id, {
+        versionLabel,
+        compoundDosagePct,
+        targetCategoryNumber,
+        notes: notes.trim() || null,
+        components: rows.map((r) => ({
+          id: r.id,
+          materialId: r.materialId,
+          partsPer1000: r.partsPer1000,
+          sortOrder: r.sortOrder,
+          note: r.note
+        }))
+      });
+      await invalidateAll();
+      dirty = false;
+    } finally {
+      saving = false;
+    }
+  }
+
+  async function promoteAccord() {
+    const proposed = data.accord?.name ?? `${data.project.name} — ${data.trial.versionLabel} accord`;
+    const name = window.prompt(
+      data.accord
+        ? 'Update accord name (already published as a material):'
+        : 'Save this trial as a reusable Accord. It will appear in the materials picker.\nName for the accord:',
+      proposed
+    );
+    if (!name) return;
+    const db = await getDb();
+    promoteToAccordDb(db, data.trial.id, name.trim());
+    await invalidateAll();
+  }
+
+  async function downloadCert() {
+    await downloadCertificate(data.trial.id);
+  }
+
+  async function addEval() {
+    const db = await getDb();
+    addEvaluationDb(db, data.trial.id, {
+      stage: evalStage,
+      elapsedMinutes: evalElapsed ? Number(evalElapsed) : null,
+      rating: evalRating ? Number(evalRating) : null,
+      notes: evalNotes.trim() || null
+    });
+    evalStage = 'top';
+    evalElapsed = '';
+    evalRating = '';
+    evalNotes = '';
+    await invalidateAll();
+  }
+
+  async function removeEval(id: number) {
+    const db = await getDb();
+    deleteEvaluationDb(db, id);
+    await invalidateAll();
+  }
 </script>
 
 <div class="space-y-4">
   <div class="flex items-start justify-between gap-4">
     <div>
-      <a href={`/projects/${data.project.id}`} class="text-xs text-ink-500 hover:underline">
+      <a href={`${base}/projects/${data.project.id}`} class="text-xs text-ink-500 hover:underline">
         ← {data.project.name}
       </a>
       <input
@@ -208,63 +285,20 @@
         />
         <span class="text-xs text-ink-500">g batch</span>
       {/if}
-      <form
-        method="POST"
-        action="?/promoteToAccord"
-        use:enhance
-        class="inline"
-        on:submit={(e) => {
-          const proposed = data.accord?.name ?? `${data.project.name} — ${data.trial.versionLabel} accord`;
-          const name = window.prompt(
-            data.accord
-              ? 'Update accord name (already published as a material):'
-              : 'Save this trial as a reusable Accord. It will appear in the materials picker.\nName for the accord:',
-            proposed
-          );
-          if (!name) {
-            e.preventDefault();
-            return;
-          }
-          (e.currentTarget as HTMLFormElement).querySelector<HTMLInputElement>('[name=accordName]')!.value = name;
-        }}
-      >
-        <input type="hidden" name="accordName" value="" />
-        <button class="btn" title="Make this trial usable as a single ingredient in other trials">
-          {data.accord ? '↻ Update accord' : '☆ Save as Accord'}
-        </button>
-      </form>
-      <a
-        href={`/projects/${data.project.id}/trials/${data.trial.id}/certificate`}
+      <button
+        type="button"
         class="btn"
-        title="Download IFRA conformity certificate as PDF"
+        on:click={promoteAccord}
+        title="Make this trial usable as a single ingredient in other trials"
       >
+        {data.accord ? '↻ Update accord' : '☆ Save as Accord'}
+      </button>
+      <button type="button" class="btn" on:click={downloadCert} title="Download IFRA conformity certificate as PDF">
         ⬇ Certificate (PDF)
-      </a>
-      <form
-        method="POST"
-        action="?/saveAll"
-        use:enhance={() => {
-          saving = true;
-          return async ({ update }) => {
-            await update({ reset: false });
-            saving = false;
-            dirty = false;
-          };
-        }}
-      >
-        <input type="hidden" name="versionLabel" value={versionLabel} />
-        <input type="hidden" name="compoundDosagePct" value={compoundDosagePct} />
-        <input type="hidden" name="targetCategoryNumber" value={targetCategoryNumber} />
-        <input type="hidden" name="notes" value={notes} />
-        <input
-          type="hidden"
-          name="componentsJson"
-          value={JSON.stringify(rows.map((r) => ({ id: r.id, materialId: r.materialId, partsPer1000: r.partsPer1000, sortOrder: r.sortOrder, note: r.note })))}
-        />
-        <button class="btn btn-primary" disabled={saving}>
-          {saving ? 'Saving…' : dirty ? 'Save changes' : 'Saved'}
-        </button>
-      </form>
+      </button>
+      <button class="btn btn-primary" disabled={saving} on:click={saveAll}>
+        {saving ? 'Saving…' : dirty ? 'Save changes' : 'Saved'}
+      </button>
     </div>
   </div>
 
@@ -566,17 +600,17 @@
       <!-- EVALUATIONS -->
       <div class="card p-4 space-y-2">
         <h2 class="text-sm font-semibold text-ink-700">Olfactory evaluations</h2>
-        <form method="POST" action="?/addEvaluation" use:enhance={() => () => invalidateAll()} class="space-y-2">
+<form on:submit|preventDefault={addEval} class="space-y-2">
           <div class="grid grid-cols-3 gap-2">
-            <select name="stage" class="input text-xs">
+            <select bind:value={evalStage} class="input text-xs">
               <option value="top">Top</option>
               <option value="heart">Heart</option>
               <option value="base">Base</option>
               <option value="drydown">Dry-down</option>
               <option value="overall">Overall</option>
             </select>
-            <input name="elapsedMinutes" type="number" min="0" placeholder="min elapsed" class="input text-xs" />
-            <select name="rating" class="input text-xs">
+            <input bind:value={evalElapsed} type="number" min="0" placeholder="min elapsed" class="input text-xs" />
+            <select bind:value={evalRating} class="input text-xs">
               <option value="">rating</option>
               <option value="1">★</option>
               <option value="2">★★</option>
@@ -585,8 +619,8 @@
               <option value="5">★★★★★</option>
             </select>
           </div>
-          <textarea name="notes" rows="2" class="input text-sm" placeholder="What do you smell?"></textarea>
-          <button class="btn">+ Log evaluation</button>
+          <textarea bind:value={evalNotes} rows="2" class="input text-sm" placeholder="What do you smell?"></textarea>
+          <button class="btn" type="submit">+ Log evaluation</button>
         </form>
         <ul class="space-y-1 max-h-64 overflow-auto">
           {#each data.evaluations as e}
@@ -600,10 +634,7 @@
                 </span>
               </div>
               {#if e.notes}<div class="text-ink-700">{e.notes}</div>{/if}
-              <form method="POST" action="?/deleteEvaluation" use:enhance={() => () => invalidateAll()} class="mt-1">
-                <input type="hidden" name="id" value={e.id} />
-                <button class="text-xs text-ink-400 hover:text-red-600">delete</button>
-              </form>
+              <button class="text-xs text-ink-400 hover:text-red-600 mt-1" on:click={() => removeEval(e.id)}>delete</button>
             </li>
           {/each}
           {#if data.evaluations.length === 0}

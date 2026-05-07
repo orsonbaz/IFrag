@@ -1,8 +1,32 @@
 <script lang="ts">
   import type { PageData } from './$types';
-  import { enhance } from '$app/forms';
+  import { invalidateAll, goto } from '$app/navigation';
+  import { base } from '$app/paths';
+  import { getDb } from '$lib/db/client';
+  import { createProject } from '$lib/db/mutations';
   export let data: PageData;
   let showNew = false;
+  let saving = false;
+
+  let name = '';
+  let brief = '';
+  let targetCategoryNumber = 4;
+
+  async function submit() {
+    if (!name.trim()) return;
+    saving = true;
+    try {
+      const db = await getDb();
+      const id = createProject(db, {
+        name: name.trim(),
+        brief: brief.trim() || null,
+        targetCategoryNumber
+      });
+      await goto(`${base}/projects/${id}`);
+    } finally {
+      saving = false;
+    }
+  }
 </script>
 
 <div class="space-y-6">
@@ -20,26 +44,26 @@
   </div>
 
   {#if showNew}
-    <form method="POST" action="?/create" use:enhance class="card p-4 space-y-3">
+    <form on:submit|preventDefault={submit} class="card p-4 space-y-3">
       <div>
         <label for="name" class="block text-sm font-medium">Name</label>
-        <input id="name" name="name" required class="input mt-1" placeholder="Spring 2026 EDP" />
+        <input id="name" bind:value={name} required class="input mt-1" placeholder="Spring 2026 EDP" />
       </div>
       <div>
         <label for="brief" class="block text-sm font-medium">Brief / intent</label>
-        <textarea id="brief" name="brief" rows="2" class="input mt-1" placeholder="What's the idea?" />
+        <textarea id="brief" bind:value={brief} rows="2" class="input mt-1" placeholder="What's the idea?" />
       </div>
       <div>
-        <label for="targetCategoryNumber" class="block text-sm font-medium">Target IFRA category</label>
-        <select id="targetCategoryNumber" name="targetCategoryNumber" class="input mt-1">
-          <option value="4">Cat 4 — Fine fragrance (default)</option>
-          <option value="51">Cat 5A — Body lotion</option>
-          <option value="52">Cat 5B — Face cream</option>
-          <option value="2">Cat 2 — Deodorant / body spray</option>
-          <option value="12">Cat 12 — Candles / no skin contact</option>
+        <label for="cat" class="block text-sm font-medium">Target IFRA category</label>
+        <select id="cat" bind:value={targetCategoryNumber} class="input mt-1">
+          <option value={4}>Cat 4 — Fine fragrance (default)</option>
+          <option value={51}>Cat 5A — Body lotion</option>
+          <option value={52}>Cat 5B — Face cream</option>
+          <option value={2}>Cat 2 — Deodorant / body spray</option>
+          <option value={12}>Cat 12 — Candles / no skin contact</option>
         </select>
       </div>
-      <button type="submit" class="btn btn-primary">Create project</button>
+      <button type="submit" class="btn btn-primary" disabled={saving}>{saving ? 'Creating…' : 'Create project'}</button>
     </form>
   {/if}
 
@@ -51,7 +75,7 @@
   {:else}
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
       {#each data.projects as p}
-        <a href={`/projects/${p.id}`} class="card p-4 hover:border-accent-500 transition">
+        <a href={`${base}/projects/${p.id}`} class="card p-4 hover:border-accent-500 transition">
           <h3 class="font-semibold text-ink-900 truncate">{p.name}</h3>
           {#if p.brief}
             <p class="mt-1 text-sm text-ink-600 line-clamp-2">{p.brief}</p>

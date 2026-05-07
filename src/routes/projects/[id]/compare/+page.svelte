@@ -2,6 +2,7 @@
   import type { PageData } from './$types';
   import { goto } from '$app/navigation';
   import { page } from '$app/stores';
+  import { base } from '$app/paths';
   import { formatPp1000, formatMoney } from '$lib/utils/format';
 
   export let data: PageData;
@@ -69,7 +70,7 @@
 </script>
 
 <div class="space-y-4">
-  <a href={`/projects/${data.project.id}`} class="text-xs text-ink-500 hover:underline">← {data.project.name}</a>
+  <a href={`${base}/projects/${data.project.id}`} class="text-xs text-ink-500 hover:underline">← {data.project.name}</a>
 
   <div class="flex items-center justify-between">
     <h1 class="text-2xl font-bold tracking-tight">Compare trials</h1>
@@ -110,7 +111,7 @@
             <th class="px-3 py-1.5 w-1/3">Material</th>
             {#each data.trials as t}
               <th class="px-3 py-1.5 text-right">
-                <a href={`/projects/${data.project.id}/trials/${t.id}`} class="text-accent-600 hover:underline">{t.versionLabel}</a>
+                <a href={`${base}/projects/${data.project.id}/trials/${t.id}`} class="text-accent-600 hover:underline">{t.versionLabel}</a>
                 <div class="text-xs text-ink-500">cat {t.targetCategoryNumber} · {t.compoundDosagePct}%</div>
               </th>
             {/each}

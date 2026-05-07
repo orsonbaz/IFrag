@@ -1,12 +1,27 @@
 <script lang="ts">
-  import { enhance } from '$app/forms';
+  import { invalidateAll } from '$app/navigation';
+  import { base } from '$app/paths';
   import type { PageData } from './$types';
+  import { getDb } from '$lib/db/client';
+  import { deleteAmendment, setActiveAmendment } from '$lib/db/mutations';
   export let data: PageData;
-  let tab: 'browse' | 'import' | 'amendments' = 'browse';
+  let tab: 'browse' | 'amendments' = 'browse';
   let search = '';
   $: filtered = data.standards.filter(
     (s) => s.name.toLowerCase().includes(search.toLowerCase()) || (s.cas ?? '').includes(search)
   );
+
+  async function makeActive(id: number) {
+    const db = await getDb();
+    setActiveAmendment(db, id);
+    await invalidateAll();
+  }
+  async function remove(id: number) {
+    if (!confirm('Delete this amendment and all its standards?')) return;
+    const db = await getDb();
+    deleteAmendment(db, id);
+    await invalidateAll();
+  }
 </script>
 
 <div class="space-y-4">
@@ -20,7 +35,7 @@
         {t === 'browse' ? 'Browse' : 'Amendments'}
       </button>
     {/each}
-    <a href="/ifra/import" class="ml-auto btn btn-primary">Import official IFRA CSV</a>
+    <a href={`${base}/ifra/import`} class="ml-auto btn btn-primary">Import official IFRA CSV</a>
   </div>
 
   {#if tab === 'browse'}
@@ -82,15 +97,9 @@
               <td class="px-3 py-1.5 text-xs text-ink-600 max-w-md">{a.notes ?? '—'}</td>
               <td class="px-3 py-1.5 text-right">
                 {#if !a.isActive}
-                  <form method="POST" action="?/setActive" use:enhance class="inline">
-                    <input type="hidden" name="id" value={a.id} />
-                    <button class="btn">Make active</button>
-                  </form>
+                  <button class="btn" on:click={() => makeActive(a.id)}>Make active</button>
                 {/if}
-                <form method="POST" action="?/delete" use:enhance class="inline" on:submit|preventDefault={(e) => { if (confirm('Delete this amendment and all its standards?')) (e.target as HTMLFormElement).submit(); }}>
-                  <input type="hidden" name="id" value={a.id} />
-                  <button class="btn">Delete</button>
-                </form>
+                <button class="btn" on:click={() => remove(a.id)}>Delete</button>
               </td>
             </tr>
           {/each}

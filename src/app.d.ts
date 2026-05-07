@@ -1,11 +1,6 @@
-import type { getDb } from '$lib/db/client';
-
+// Pure client-side app — no server locals.
 declare global {
-  namespace App {
-    interface Locals {
-      db: ReturnType<typeof getDb>;
-    }
-  }
+  namespace App {}
 }
 
 export {};

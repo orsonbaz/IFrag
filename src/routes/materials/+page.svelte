@@ -1,12 +1,22 @@
 <script lang="ts">
-  import { enhance } from '$app/forms';
+  import { invalidateAll } from '$app/navigation';
+  import { base } from '$app/paths';
   import type { PageData } from './$types';
   import { formatMoney } from '$lib/utils/format';
+  import { getDb } from '$lib/db/client';
+  import { createMaterial, deleteMaterial } from '$lib/db/mutations';
   export let data: PageData;
   let search = '';
   let filterNatural: 'all' | 'natural' | 'synthetic' | 'accord' = 'all';
   let filterIfra: 'all' | 'linked' | 'unlinked' = 'all';
   let showNew = false;
+
+  let nName = '';
+  let nCas = '';
+  let nSupplier = '';
+  let nDilution = 100;
+  let nPrice: number | '' = '';
+  let nNatural = false;
 
   $: filtered = data.materials
     .filter((m) => m.name.toLowerCase().includes(search.toLowerCase()) || (m.cas ?? '').includes(search))
@@ -14,7 +24,7 @@
       if (filterNatural === 'all') return true;
       if (filterNatural === 'accord') return !!m.isAccord;
       if (m.isAccord) return false;
-      return (filterNatural === 'natural') === m.isNatural;
+      return (filterNatural === 'natural') === !!m.isNatural;
     })
     .filter((m) =>
       filterIfra === 'all'
@@ -23,6 +33,32 @@
           ? m.linkedStandards + m.annexCount > 0
           : m.linkedStandards + m.annexCount === 0
     );
+
+  async function add() {
+    if (!nName.trim()) return;
+    const db = await getDb();
+    createMaterial(db, {
+      name: nName.trim(),
+      cas: nCas.trim() || null,
+      supplier: nSupplier.trim() || null,
+      priceEurPerKg: nPrice === '' ? null : Number(nPrice),
+      dilutionPct: nDilution,
+      isNatural: nNatural
+    });
+    nName = nCas = nSupplier = '';
+    nDilution = 100;
+    nPrice = '';
+    nNatural = false;
+    showNew = false;
+    await invalidateAll();
+  }
+
+  async function remove(id: number) {
+    if (!confirm('Delete material?')) return;
+    const db = await getDb();
+    deleteMaterial(db, id);
+    await invalidateAll();
+  }
 </script>
 
 <div class="space-y-4">
@@ -32,35 +68,35 @@
       <p class="mt-1 text-sm text-ink-600">{data.materials.length} ingredients in your library.</p>
     </div>
     <div class="flex gap-2">
-      <a href="/materials/import" class="btn">Import from XLSX/CSV</a>
+      <a href={`${base}/materials/import`} class="btn">Import from XLSX/CSV</a>
       <button class="btn btn-primary" on:click={() => (showNew = !showNew)}>+ New material</button>
     </div>
   </div>
 
   {#if showNew}
-    <form method="POST" action="?/create" use:enhance={() => () => (showNew = false)} class="card p-4 grid grid-cols-1 md:grid-cols-3 gap-3">
+    <form on:submit|preventDefault={add} class="card p-4 grid grid-cols-1 md:grid-cols-3 gap-3">
       <label class="text-sm">
         <span class="block text-ink-600">Name</span>
-        <input name="name" required class="input mt-0.5" />
+        <input bind:value={nName} required class="input mt-0.5" />
       </label>
       <label class="text-sm">
         <span class="block text-ink-600">CAS</span>
-        <input name="cas" class="input mt-0.5" placeholder="e.g. 5392-40-5" />
+        <input bind:value={nCas} class="input mt-0.5" placeholder="e.g. 5392-40-5" />
       </label>
       <label class="text-sm">
         <span class="block text-ink-600">Supplier</span>
-        <input name="supplier" class="input mt-0.5" />
+        <input bind:value={nSupplier} class="input mt-0.5" />
       </label>
       <label class="text-sm">
         <span class="block text-ink-600">Dilution %</span>
-        <input name="dilutionPct" type="number" value="100" min="0" max="100" step="0.1" class="input mt-0.5" />
+        <input bind:value={nDilution} type="number" min="0" max="100" step="0.1" class="input mt-0.5" />
       </label>
       <label class="text-sm">
         <span class="block text-ink-600">Price € / kg</span>
-        <input name="priceEurPerKg" type="number" step="0.01" min="0" class="input mt-0.5" />
+        <input bind:value={nPrice} type="number" step="0.01" min="0" class="input mt-0.5" />
       </label>
       <label class="text-sm flex items-end gap-2">
-        <input type="checkbox" name="isNatural" />
+        <input bind:checked={nNatural} type="checkbox" />
         <span>Natural (essential oil, absolute, etc.)</span>
       </label>
       <div class="md:col-span-3 flex gap-2">
@@ -103,7 +139,7 @@
         {#each filtered as m}
           <tr>
             <td class="px-3 py-1.5">
-              <a href={`/materials/${m.id}`} class="text-accent-600 hover:underline font-medium">{m.name}</a>
+              <a href={`${base}/materials/${m.id}`} class="text-accent-600 hover:underline font-medium">{m.name}</a>
               {#if m.isAccord}<span class="badge bg-accent-500/15 text-accent-600 ml-1">📦 accord</span>{/if}
               {#if m.descriptor1 || m.descriptor2}
                 <div class="text-xs text-ink-500">{[m.descriptor1, m.descriptor2].filter(Boolean).join(' / ')}</div>
@@ -126,10 +162,7 @@
               {/if}
             </td>
             <td class="px-3 py-1.5 text-right">
-              <form method="POST" action="?/delete" use:enhance class="inline" on:submit|preventDefault={(e) => { if (confirm('Delete material?')) (e.target as HTMLFormElement).submit(); }}>
-                <input type="hidden" name="id" value={m.id} />
-                <button class="text-xs text-ink-400 hover:text-red-600">delete</button>
-              </form>
+              <button class="text-xs text-ink-400 hover:text-red-600" on:click={() => remove(m.id)}>delete</button>
             </td>
           </tr>
         {/each}

@@ -1,8 +1,15 @@
 <script lang="ts">
-  import { enhance } from '$app/forms';
   import type { PageData } from './$types';
+  import { invalidateAll, goto } from '$app/navigation';
+  import { base } from '$app/paths';
+  import { getDb } from '$lib/db/client';
+  import { createTrial, deleteTrial, forkTrial, updateProject } from '$lib/db/mutations';
   export let data: PageData;
   let editing = false;
+
+  let editName = data.project.name;
+  let editBrief = data.project.brief ?? '';
+  let editTarget = data.project.targetCategoryNumber ?? 4;
 
   function statusClass(s: string) {
     if (s === 'pass') return 'badge badge-pass';
@@ -10,25 +17,52 @@
     if (s === 'fail') return 'badge badge-fail';
     return 'badge badge-unknown';
   }
+
+  async function saveProject() {
+    const db = await getDb();
+    updateProject(db, data.project.id, {
+      name: editName.trim(),
+      brief: editBrief.trim() || null,
+      targetCategoryNumber: editTarget
+    });
+    editing = false;
+    await invalidateAll();
+  }
+
+  async function newTrial() {
+    const db = await getDb();
+    const id = createTrial(db, data.project.id, {
+      versionLabel: `v${data.trials.length + 1}`,
+      targetCategoryNumber: data.project.targetCategoryNumber,
+      compoundDosagePct: 20
+    });
+    await goto(`${base}/projects/${data.project.id}/trials/${id}`);
+  }
+
+  async function fork(trialId: number) {
+    const db = await getDb();
+    const id = forkTrial(db, trialId);
+    await goto(`${base}/projects/${data.project.id}/trials/${id}`);
+  }
+
+  async function remove(trialId: number) {
+    if (!confirm('Delete this trial?')) return;
+    const db = await getDb();
+    deleteTrial(db, trialId);
+    await invalidateAll();
+  }
 </script>
 
 <div class="space-y-6">
   <div class="flex items-start justify-between gap-4">
     <div class="min-w-0">
       {#if editing}
-        <form
-          method="POST"
-          action="?/updateProject"
-          use:enhance={() => () => (editing = false)}
-          class="space-y-2"
-        >
-          <input name="name" required value={data.project.name} class="input text-2xl font-bold" />
-          <textarea name="brief" rows="2" class="input" placeholder="Brief">{data.project.brief ?? ''}</textarea>
-          <select name="targetCategoryNumber" class="input">
+        <form on:submit|preventDefault={saveProject} class="space-y-2">
+          <input bind:value={editName} required class="input text-2xl font-bold" />
+          <textarea bind:value={editBrief} rows="2" class="input" placeholder="Brief"></textarea>
+          <select bind:value={editTarget} class="input">
             {#each data.categories as c}
-              <option value={c.number} selected={c.number === data.project.targetCategoryNumber}>
-                Cat {c.code} — {c.label}
-              </option>
+              <option value={c.number}>Cat {c.code} — {c.label}</option>
             {/each}
           </select>
           <div class="flex gap-2">
@@ -50,13 +84,9 @@
     </div>
     <div class="flex gap-2">
       {#if data.trials.length >= 2}
-        <a href={`/projects/${data.project.id}/compare`} class="btn">Compare trials</a>
+        <a href={`${base}/projects/${data.project.id}/compare`} class="btn">Compare trials</a>
       {/if}
-      <form method="POST" action="?/newTrial" use:enhance>
-        <input type="hidden" name="versionLabel" value={`v${data.trials.length + 1}`} />
-        <input type="hidden" name="compoundDosagePct" value="20" />
-        <button class="btn btn-primary">+ New trial</button>
-      </form>
+      <button class="btn btn-primary" on:click={newTrial}>+ New trial</button>
     </div>
   </div>
 
@@ -82,7 +112,7 @@
           {#each data.trials as t}
             <tr>
               <td class="px-4 py-2 font-medium">
-                <a href={`/projects/${data.project.id}/trials/${t.id}`} class="text-accent-600 hover:underline">
+                <a href={`${base}/projects/${data.project.id}/trials/${t.id}`} class="text-accent-600 hover:underline">
                   {t.versionLabel}
                 </a>
                 {#if t.parentTrialId}
@@ -101,22 +131,8 @@
                 {/if}
               </td>
               <td class="px-4 py-2 text-right">
-                <form method="POST" action="?/forkTrial" use:enhance class="inline">
-                  <input type="hidden" name="sourceTrialId" value={t.id} />
-                  <button class="btn">Fork</button>
-                </form>
-                <form
-                  method="POST"
-                  action="?/deleteTrial"
-                  use:enhance
-                  class="inline"
-                  on:submit|preventDefault={(e) => {
-                    if (confirm('Delete this trial?')) (e.target as HTMLFormElement).submit();
-                  }}
-                >
-                  <input type="hidden" name="trialId" value={t.id} />
-                  <button class="btn">Delete</button>
-                </form>
+                <button class="btn" on:click={() => fork(t.id)}>Fork</button>
+                <button class="btn" on:click={() => remove(t.id)}>Delete</button>
               </td>
             </tr>
           {/each}

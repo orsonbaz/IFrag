@@ -1,36 +1,65 @@
-import { and, asc, eq, sql } from 'drizzle-orm';
-import { getDb, getSqlite } from './client.js';
-import * as schema from './schema.js';
-import type { CategoryRow, StandardRef, StandardLimit, ComponentInput } from '$lib/compliance/types';
+import type { DbAdapter } from './client.js';
+import type {
+  CategoryRow,
+  ComponentInput,
+  StandardLimit,
+  StandardRef
+} from '$lib/compliance/types';
+import type {
+  Evaluation,
+  Material,
+  MaterialAnnexContribution,
+  Project,
+  Settings,
+  Trial
+} from './schema.js';
 
-export function listProjects() {
-  const db = getDb();
-  return db.select().from(schema.projects).orderBy(asc(schema.projects.name)).all();
-}
+// All queries take an explicit DbAdapter — caller is responsible for awaiting `getDb()`
+// once and passing it through. This keeps these functions sync, which simplifies pages.
 
-export function getProject(id: number) {
-  const db = getDb();
-  return db.select().from(schema.projects).where(eq(schema.projects.id, id)).get();
-}
-
-export function listTrials(projectId: number) {
-  const db = getDb();
+export function listProjects(db: DbAdapter): Project[] {
   return db
-    .select()
-    .from(schema.trials)
-    .where(eq(schema.trials.projectId, projectId))
-    .orderBy(asc(schema.trials.createdAt))
-    .all();
+    .prepare('SELECT * FROM projects ORDER BY name COLLATE NOCASE')
+    .all()
+    .map(toProject);
 }
 
-export function getTrial(id: number) {
-  const db = getDb();
-  return db.select().from(schema.trials).where(eq(schema.trials.id, id)).get();
+export function getProject(db: DbAdapter, id: number): Project | undefined {
+  const r = db.prepare('SELECT * FROM projects WHERE id = ?').get(id);
+  return r ? toProject(r) : undefined;
 }
 
-export function listTrialComponents(trialId: number) {
-  const sqlite = getSqlite();
-  return sqlite
+export function listTrials(db: DbAdapter, projectId: number): Trial[] {
+  return db
+    .prepare('SELECT * FROM trials WHERE project_id = ? ORDER BY created_at ASC')
+    .all(projectId)
+    .map(toTrial);
+}
+
+export function getTrial(db: DbAdapter, id: number): Trial | undefined {
+  const r = db.prepare('SELECT * FROM trials WHERE id = ?').get(id);
+  return r ? toTrial(r) : undefined;
+}
+
+export interface TrialComponentRow {
+  id: number;
+  trialId: number;
+  materialId: number;
+  partsPer1000: number;
+  sortOrder: number;
+  note: string | null;
+  materialName: string;
+  cas: string | null;
+  isNatural: number;
+  isAccord: number;
+  sourceTrialId: number | null;
+  dilutionPct: number;
+  priceMinor: number | null;
+  currency: string;
+}
+
+export function listTrialComponents(db: DbAdapter, trialId: number): TrialComponentRow[] {
+  return db
     .prepare(
       `SELECT tc.id, tc.trial_id as trialId, tc.material_id as materialId,
               tc.parts_per_1000 as partsPer1000, tc.sort_order as sortOrder, tc.note,
@@ -42,98 +71,80 @@ export function listTrialComponents(trialId: number) {
        WHERE tc.trial_id = ?
        ORDER BY tc.sort_order ASC, tc.id ASC`
     )
-    .all(trialId) as Array<{
-    id: number;
-    trialId: number;
-    materialId: number;
-    partsPer1000: number;
-    sortOrder: number;
-    note: string | null;
-    materialName: string;
-    cas: string | null;
-    isNatural: number;
-    isAccord: number;
-    sourceTrialId: number | null;
-    dilutionPct: number;
-    priceMinor: number | null;
-    currency: string;
-  }>;
+    .all(trialId) as unknown as TrialComponentRow[];
 }
 
-export function listEvaluations(trialId: number) {
-  const db = getDb();
+export function listEvaluations(db: DbAdapter, trialId: number): Evaluation[] {
   return db
-    .select()
-    .from(schema.evaluations)
-    .where(eq(schema.evaluations.trialId, trialId))
-    .orderBy(sql`evaluated_at DESC`)
-    .all();
-}
-
-export function listMaterials() {
-  const db = getDb();
-  return db.select().from(schema.materials).orderBy(asc(schema.materials.name)).all();
-}
-
-export function getMaterial(id: number) {
-  const db = getDb();
-  return db.select().from(schema.materials).where(eq(schema.materials.id, id)).get();
-}
-
-export function getMaterialAnnex(materialId: number) {
-  const db = getDb();
-  return db
-    .select()
-    .from(schema.materialAnnexContributions)
-    .where(eq(schema.materialAnnexContributions.materialId, materialId))
-    .all();
-}
-
-export function getActiveAmendmentId(): number | null {
-  const sqlite = getSqlite();
-  const row = sqlite
-    .prepare(`SELECT id FROM ifra_amendments WHERE is_active = 1 LIMIT 1`)
-    .get() as { id: number } | undefined;
-  return row?.id ?? null;
-}
-
-export function listCategories(): CategoryRow[] {
-  const sqlite = getSqlite();
-  return sqlite
     .prepare(
-      `SELECT number, code, label, sort_order as sortOrder
-       FROM ifra_categories WHERE active = 1 ORDER BY sort_order`
+      `SELECT id, trial_id as trialId, evaluated_at as evaluatedAt, stage,
+              elapsed_minutes as elapsedMinutes, rating, notes
+       FROM evaluations WHERE trial_id = ? ORDER BY evaluated_at DESC`
     )
-    .all() as CategoryRow[];
+    .all(trialId) as unknown as Evaluation[];
 }
 
-export function getSettings() {
-  const db = getDb();
-  let row = db.select().from(schema.settings).where(eq(schema.settings.id, 1)).get();
+export function listMaterials(db: DbAdapter): Material[] {
+  return db.prepare('SELECT * FROM materials ORDER BY name COLLATE NOCASE').all().map(toMaterial);
+}
+
+export function getMaterial(db: DbAdapter, id: number): Material | undefined {
+  const r = db.prepare('SELECT * FROM materials WHERE id = ?').get(id);
+  return r ? toMaterial(r) : undefined;
+}
+
+export function getMaterialAnnex(db: DbAdapter, materialId: number): MaterialAnnexContribution[] {
+  return db
+    .prepare(
+      `SELECT id, material_id as materialId, constituent_name as constituentName,
+              constituent_cas as constituentCas, contribution_pct as contributionPct, notes
+       FROM material_annex_contributions WHERE material_id = ?`
+    )
+    .all(materialId) as unknown as MaterialAnnexContribution[];
+}
+
+export function getActiveAmendmentId(db: DbAdapter): number | null {
+  const r = db.prepare('SELECT id FROM ifra_amendments WHERE is_active = 1 LIMIT 1').get();
+  return r ? Number(r.id) : null;
+}
+
+export function listCategories(db: DbAdapter): CategoryRow[] {
+  return db
+    .prepare(
+      'SELECT number, code, label, sort_order as sortOrder FROM ifra_categories WHERE active = 1 ORDER BY sort_order'
+    )
+    .all() as unknown as CategoryRow[];
+}
+
+export function getSettings(db: DbAdapter): Settings {
+  let row = db.prepare('SELECT * FROM settings WHERE id = 1').get();
   if (!row) {
-    db.insert(schema.settings).values({ id: 1 }).run();
-    row = db.select().from(schema.settings).where(eq(schema.settings.id, 1)).get();
+    db.prepare(
+      `INSERT INTO settings (id, default_currency, default_category_number, default_unit_display, default_batch_g) VALUES (1, 'EUR', 4, 'pp1000', 30)`
+    ).run();
+    row = db.prepare('SELECT * FROM settings WHERE id = 1').get();
   }
-  return row!;
+  return toSettings(row!);
 }
 
-/**
- * Loads all standards for an amendment, indexed by both id and primary CAS.
- */
-export function loadStandardsByAmendment(amendmentId: number): {
+export interface StandardsByAmendment {
   byId: Map<number, StandardRef>;
   byCas: Map<string, StandardRef>;
   byName: Map<string, StandardRef>;
   list: StandardRef[];
-} {
-  const sqlite = getSqlite();
-  const stdRows = sqlite
+}
+
+export function loadStandardsByAmendment(
+  db: DbAdapter,
+  amendmentId: number
+): StandardsByAmendment {
+  const stdRows = db
     .prepare(
       `SELECT id, primary_cas as primaryCas, material_name as materialName,
               standard_type as type, reason
        FROM ifra_standards WHERE amendment_id = ?`
     )
-    .all(amendmentId) as Array<{
+    .all(amendmentId) as unknown as Array<{
     id: number;
     primaryCas: string | null;
     materialName: string;
@@ -141,7 +152,7 @@ export function loadStandardsByAmendment(amendmentId: number): {
     reason: string | null;
   }>;
 
-  const limitRows = sqlite
+  const limitRows = db
     .prepare(
       `SELECT cl.standard_id as standardId, cl.category_number as categoryNumber,
               cl.limit_pct as limitPct, cl.prohibited, cl.no_restriction as noRestriction,
@@ -150,7 +161,7 @@ export function loadStandardsByAmendment(amendmentId: number): {
        JOIN ifra_standards s ON s.id = cl.standard_id
        WHERE s.amendment_id = ?`
     )
-    .all(amendmentId) as Array<{
+    .all(amendmentId) as unknown as Array<{
     standardId: number;
     categoryNumber: number;
     limitPct: number | null;
@@ -159,14 +170,12 @@ export function loadStandardsByAmendment(amendmentId: number): {
     specText: string | null;
   }>;
 
-  const casRows = sqlite
+  const casRows = db
     .prepare(
-      `SELECT sc.standard_id as standardId, sc.cas
-       FROM ifra_standard_cas sc
-       JOIN ifra_standards s ON s.id = sc.standard_id
-       WHERE s.amendment_id = ?`
+      `SELECT sc.standard_id as standardId, sc.cas FROM ifra_standard_cas sc
+       JOIN ifra_standards s ON s.id = sc.standard_id WHERE s.amendment_id = ?`
     )
-    .all(amendmentId) as Array<{ standardId: number; cas: string }>;
+    .all(amendmentId) as unknown as Array<{ standardId: number; cas: string }>;
 
   const byId = new Map<number, StandardRef>();
   for (const s of stdRows) {
@@ -194,9 +203,7 @@ export function loadStandardsByAmendment(amendmentId: number): {
   for (const s of stdRows) {
     if (s.primaryCas) byCas.set(s.primaryCas, byId.get(s.id)!);
   }
-  for (const r of casRows) {
-    byCas.set(r.cas, byId.get(r.standardId)!);
-  }
+  for (const r of casRows) byCas.set(r.cas, byId.get(r.standardId)!);
 
   const byName = new Map<string, StandardRef>();
   for (const s of stdRows) byName.set(s.materialName.toLowerCase(), byId.get(s.id)!);
@@ -206,18 +213,17 @@ export function loadStandardsByAmendment(amendmentId: number): {
 
 /**
  * Builds engine-ready ComponentInputs for a trial. Accord materials are
- * recursively expanded into their constituent components (scaled by share).
+ * recursively expanded into their constituent components.
  */
-export function buildComponentInputs(trialId: number): ComponentInput[] {
-  const amendmentId = getActiveAmendmentId();
+export function buildComponentInputs(db: DbAdapter, trialId: number): ComponentInput[] {
+  const amendmentId = getActiveAmendmentId(db);
   if (!amendmentId) return [];
-  const { byCas, byName } = loadStandardsByAmendment(amendmentId);
-  const sqlite = getSqlite();
+  const { byCas, byName } = loadStandardsByAmendment(db, amendmentId);
 
   function loadDirectStandards(materialId: number, cas: string | null): StandardRef[] {
-    const links = sqlite
-      .prepare(`SELECT standard_id as standardId FROM material_ifra_links WHERE material_id = ?`)
-      .all(materialId) as Array<{ standardId: number }>;
+    const links = db
+      .prepare('SELECT standard_id as standardId FROM material_ifra_links WHERE material_id = ?')
+      .all(materialId) as unknown as Array<{ standardId: number }>;
     const out: StandardRef[] = [];
     for (const l of links) {
       const std = Array.from(byName.values()).find((s) => s.id === l.standardId);
@@ -231,13 +237,13 @@ export function buildComponentInputs(trialId: number): ComponentInput[] {
   }
 
   function loadAnnex(materialId: number) {
-    const rows = sqlite
+    const rows = db
       .prepare(
         `SELECT constituent_name as constituentName, constituent_cas as constituentCas,
                 contribution_pct as contributionPct
          FROM material_annex_contributions WHERE material_id = ?`
       )
-      .all(materialId) as Array<{
+      .all(materialId) as unknown as Array<{
       constituentName: string;
       constituentCas: string | null;
       contributionPct: number;
@@ -267,9 +273,9 @@ export function buildComponentInputs(trialId: number): ComponentInput[] {
     dilutionPct: number,
     depth: number
   ) {
-    if (depth > 6) return; // accord recursion guard
+    if (depth > 6) return;
     if (isAccord && sourceTrialId) {
-      const sub = sqlite
+      const sub = db
         .prepare(
           `SELECT tc.id, tc.material_id as materialId, tc.parts_per_1000 as partsPer1000,
                   m.name as materialName, m.cas, m.is_natural as isNatural,
@@ -279,7 +285,7 @@ export function buildComponentInputs(trialId: number): ComponentInput[] {
            JOIN materials m ON m.id = tc.material_id
            WHERE tc.trial_id = ?`
         )
-        .all(sourceTrialId) as Array<{
+        .all(sourceTrialId) as unknown as Array<{
         id: number;
         materialId: number;
         partsPer1000: number;
@@ -291,9 +297,6 @@ export function buildComponentInputs(trialId: number): ComponentInput[] {
         dilutionPct: number;
       }>;
       const subTotal = sub.reduce((s, x) => s + x.partsPer1000, 0) || 1;
-      // The accord at `partsPer1000` in the parent represents `partsPer1000` parts of a
-      // mixture whose internal proportions are the source trial. Each sub-component
-      // contributes `partsPer1000 * (sub.partsPer1000 / subTotal)` parts to the parent.
       for (const sc of sub) {
         const share = (partsPer1000 * sc.partsPer1000) / subTotal;
         expand(
@@ -324,8 +327,7 @@ export function buildComponentInputs(trialId: number): ComponentInput[] {
     });
   }
 
-  const top = listTrialComponents(trialId);
-  for (const c of top) {
+  for (const c of listTrialComponents(db, trialId)) {
     expand(
       c.id,
       c.materialId,
@@ -342,38 +344,67 @@ export function buildComponentInputs(trialId: number): ComponentInput[] {
   return out;
 }
 
-/**
- * Recursively compute the cost in minor currency units for a parent share of an accord.
- * Returns null if any component has no price.
- */
-export function accordCostMinorPerGram(materialId: number, depth = 0): number | null {
-  if (depth > 6) return null;
-  const sqlite = getSqlite();
-  const m = sqlite
-    .prepare(
-      `SELECT id, is_accord as isAccord, source_trial_id as sourceTrialId, price_minor as priceMinor FROM materials WHERE id = ?`
-    )
-    .get(materialId) as { id: number; isAccord: number; sourceTrialId: number | null; priceMinor: number | null } | undefined;
-  if (!m) return null;
-  if (!m.isAccord || !m.sourceTrialId) return m.priceMinor ?? null;
-  const sub = sqlite
-    .prepare(
-      `SELECT tc.material_id as materialId, tc.parts_per_1000 as partsPer1000
-       FROM trial_components tc WHERE tc.trial_id = ?`
-    )
-    .all(m.sourceTrialId) as Array<{ materialId: number; partsPer1000: number }>;
-  const total = sub.reduce((s, x) => s + x.partsPer1000, 0);
-  if (total === 0) return null;
-  let cost = 0;
-  let hasUnknown = false;
-  for (const sc of sub) {
-    const c = accordCostMinorPerGram(sc.materialId, depth + 1);
-    if (c == null) {
-      hasUnknown = true;
-      continue;
-    }
-    cost += (sc.partsPer1000 / total) * c;
-  }
-  if (hasUnknown && cost === 0) return null;
-  return Math.round(cost);
+// row → typed converters
+function toProject(r: Record<string, unknown>): Project {
+  return {
+    id: Number(r.id),
+    name: String(r.name),
+    brief: r.brief as string | null,
+    targetCategoryNumber: r.target_category_number as number | null,
+    createdAt: String(r.created_at)
+  };
+}
+
+function toTrial(r: Record<string, unknown>): Trial {
+  return {
+    id: Number(r.id),
+    projectId: Number(r.project_id),
+    versionLabel: String(r.version_label),
+    parentTrialId: r.parent_trial_id as number | null,
+    targetCategoryNumber: r.target_category_number as number | null,
+    compoundDosagePct: Number(r.compound_dosage_pct),
+    notes: r.notes as string | null,
+    archived: Number(r.archived),
+    createdAt: String(r.created_at),
+    updatedAt: String(r.updated_at)
+  };
+}
+
+function toMaterial(r: Record<string, unknown>): Material {
+  return {
+    id: Number(r.id),
+    name: String(r.name),
+    cas: r.cas as string | null,
+    supplier: r.supplier as string | null,
+    priceMinor: r.price_minor as number | null,
+    currency: String(r.currency),
+    dilutionPct: Number(r.dilution_pct),
+    densityGPerMl: r.density_g_per_ml as number | null,
+    stockG: r.stock_g as number | null,
+    isNatural: Number(r.is_natural),
+    isAccord: Number(r.is_accord),
+    sourceTrialId: r.source_trial_id as number | null,
+    chemicalGroup: r.chemical_group as string | null,
+    family: r.family as string | null,
+    descriptor1: r.descriptor_1 as string | null,
+    descriptor2: r.descriptor_2 as string | null,
+    personalDescription: r.personal_description as string | null,
+    volatility: r.volatility as string | null,
+    dosageBand: r.dosage_band as string | null,
+    usage: r.usage as string | null,
+    notes: r.notes as string | null,
+    createdAt: String(r.created_at ?? ''),
+    updatedAt: String(r.updated_at ?? '')
+  };
+}
+
+function toSettings(r: Record<string, unknown>): Settings {
+  return {
+    id: Number(r.id),
+    defaultCurrency: String(r.default_currency),
+    defaultCategoryNumber: Number(r.default_category_number),
+    defaultUnitDisplay: r.default_unit_display as 'pp1000' | 'pct' | 'grams',
+    activeAmendmentId: r.active_amendment_id as number | null,
+    defaultBatchG: Number(r.default_batch_g)
+  };
 }
