@@ -30,7 +30,7 @@ jobs:
 
       - name: Build
         env:
-          IFRAG_BASE_PATH: /ifrag
+          IFRAG_BASE_PATH: /IFrag
           NODE_ENV: production
         run: npm run build
 

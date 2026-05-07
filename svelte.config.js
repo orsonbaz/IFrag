@@ -2,7 +2,7 @@ import adapter from '@sveltejs/adapter-static';
 import { vitePreprocess } from '@sveltejs/vite-plugin-svelte';
 
 const dev = process.env.NODE_ENV !== 'production';
-const base = process.env.IFRAG_BASE_PATH ?? (dev ? '' : '/ifrag');
+const base = process.env.IFRAG_BASE_PATH ?? (dev ? '' : '/IFrag');
 
 const config = {
   preprocess: vitePreprocess(),

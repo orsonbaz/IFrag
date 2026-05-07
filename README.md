@@ -12,7 +12,7 @@ formulas' compliance checks.
 
 ## Try it
 
-Hosted on GitHub Pages (deployed automatically from this repo): **https://orsonbaz.github.io/ifrag/**
+Hosted on GitHub Pages (deployed automatically from this repo): **https://orsonbaz.github.io/IFrag/**
 
 First load: the app downloads the SQLite WASM (~660 KB once, then cached) and seeds ~110
 starter materials and the IFRA 51st-Amendment starter standards into your browser. Your data
