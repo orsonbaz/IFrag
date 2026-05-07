@@ -1,0 +1,20 @@
+[
+  { "number": 1, "code": "1", "label": "Lip products", "description": "Leave-on products applied to the lips: lipstick, balm, lip liner.", "sortOrder": 1 },
+  { "number": 2, "code": "2", "label": "Deodorants & body sprays", "description": "Leave-on products applied to the axillae: deodorant, antiperspirant, fragranced body sprays/mists.", "sortOrder": 2 },
+  { "number": 3, "code": "3", "label": "Eye / facial cleansers", "description": "Hydroalcoholic products on shaved skin: eye products, men's facial creams, facial cleansers, exfoliants.", "sortOrder": 3 },
+  { "number": 4, "code": "4", "label": "Fine fragrance", "description": "Hydroalcoholic products on unshaved skin: perfumes, eaux de toilette, body creams, body oils, hair styling, hair sprays.", "sortOrder": 4 },
+  { "number": 51, "code": "5A", "label": "Body lotion", "description": "Leave-on body lotions and oils (excluding baby).", "sortOrder": 5 },
+  { "number": 52, "code": "5B", "label": "Face cream", "description": "Leave-on face cream, facial make-up, masks.", "sortOrder": 6 },
+  { "number": 53, "code": "5C", "label": "Hand cream", "description": "Leave-on hand cream, baby powder/talc, refreshing tissues for face/neck/body.", "sortOrder": 7 },
+  { "number": 54, "code": "5D", "label": "Baby cream", "description": "Baby cream, baby oil, baby talc.", "sortOrder": 8 },
+  { "number": 6, "code": "6", "label": "Oral / lip", "description": "Mouthwash, toothpaste — oral and lip exposure.", "sortOrder": 9 },
+  { "number": 71, "code": "7A", "label": "Rinse-off hair", "description": "Shampoo, conditioner, hair-rinse — significant rinse-off.", "sortOrder": 10 },
+  { "number": 72, "code": "7B", "label": "Leave-on hair", "description": "Hair styling, hair gels, leave-in hair conditioners.", "sortOrder": 11 },
+  { "number": 8, "code": "8", "label": "Anogenital exposure", "description": "Significant anogenital exposure: tampons, intimate wipes, toilet paper.", "sortOrder": 12 },
+  { "number": 9, "code": "9", "label": "Rinse-off body", "description": "Body wash, soap, shower gel — body & hand rinse-off.", "sortOrder": 13 },
+  { "number": 101, "code": "10A", "label": "Rinse-off household", "description": "Household cleaning agents, dish soap.", "sortOrder": 14 },
+  { "number": 102, "code": "10B", "label": "Leave-on household", "description": "Air fresheners, fabric softeners (leave-on).", "sortOrder": 15 },
+  { "number": 111, "code": "11A", "label": "Feminine hygiene / wipes", "description": "Products with intended skin contact but minimal transfer: feminine hygiene, cleaning wipes.", "sortOrder": 16 },
+  { "number": 112, "code": "11B", "label": "Insect repellent (skin)", "description": "Insect repellents, sunscreens (skin-applied) with minimal transfer.", "sortOrder": 17 },
+  { "number": 12, "code": "12", "label": "No skin contact", "description": "Products not intended for direct skin contact, minimal/insignificant transfer: candles, laundry detergents, room fragrances.", "sortOrder": 18 }
+]

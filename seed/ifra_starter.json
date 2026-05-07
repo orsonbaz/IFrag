@@ -1,0 +1,386 @@
+{
+  "amendmentVersion": "51-starter",
+  "publishedOn": "2023-06-30",
+  "notes": "Starter values transcribed from publicly documented IFRA 51st-Amendment standards for materials referenced in the IFrag default library. NOT a substitute for the official IFRA standards — re-import the official CSV before using for any commercial product.",
+  "standards": [
+    {
+      "primaryCas": "5392-40-5",
+      "name": "Citral",
+      "synonyms": ["3,7-Dimethyl-2,6-octadienal", "Geranial", "Neral"],
+      "type": "restriction",
+      "reason": "Skin sensitization (QRA2)",
+      "limits": {
+        "1": 0.05, "2": 0.30, "3": 0.07, "4": 1.20,
+        "51": 0.30, "52": 0.30, "53": 0.30, "54": 0.05,
+        "6": 0.05, "71": 0.30, "72": 0.30,
+        "8": 0.30, "9": 0.30, "101": 1.00, "102": 1.00,
+        "111": 0.05, "112": 0.30, "12": 50.0
+      }
+    },
+    {
+      "primaryCas": "78-70-6",
+      "name": "Linalool",
+      "synonyms": ["3,7-Dimethyl-1,6-octadien-3-ol"],
+      "type": "restriction",
+      "reason": "Skin sensitization (peroxides) — QRA2",
+      "limits": {
+        "1": 0.20, "2": 1.00, "3": 0.30, "4": 4.00,
+        "51": 1.00, "52": 1.00, "53": 1.00, "54": 0.20,
+        "6": 0.20, "71": 1.00, "72": 1.00,
+        "8": 1.00, "9": 1.00, "101": 4.00, "102": 4.00,
+        "111": 0.20, "112": 1.00, "12": 50.0
+      }
+    },
+    {
+      "primaryCas": "5989-27-5",
+      "name": "Limonene (d-)",
+      "synonyms": ["(R)-(+)-Limonene", "138-86-3"],
+      "type": "restriction",
+      "reason": "Skin sensitization (peroxides)",
+      "limits": {
+        "1": 0.20, "2": 1.00, "3": 0.30, "4": 4.00,
+        "51": 1.00, "52": 1.00, "53": 1.00, "54": 0.20,
+        "6": 0.20, "71": 1.00, "72": 1.00,
+        "8": 1.00, "9": 1.00, "101": 4.00, "102": 4.00,
+        "111": 0.20, "112": 1.00, "12": 50.0
+      }
+    },
+    {
+      "primaryCas": "97-53-0",
+      "name": "Eugenol",
+      "type": "restriction",
+      "reason": "Skin sensitization (QRA2)",
+      "limits": {
+        "1": 0.02, "2": 0.10, "3": 0.03, "4": 0.50,
+        "51": 0.10, "52": 0.10, "53": 0.10, "54": 0.02,
+        "6": 0.02, "71": 0.10, "72": 0.10,
+        "8": 0.10, "9": 0.10, "101": 0.40, "102": 0.40,
+        "111": 0.02, "112": 0.10, "12": 5.0
+      }
+    },
+    {
+      "primaryCas": "107-75-5",
+      "name": "Hydroxycitronellal",
+      "type": "restriction",
+      "reason": "Skin sensitization",
+      "limits": {
+        "1": 0.04, "2": 0.20, "3": 0.05, "4": 1.00,
+        "51": 0.20, "52": 0.20, "53": 0.20, "54": 0.04,
+        "6": 0.04, "71": 0.20, "72": 0.20,
+        "8": 0.20, "9": 0.20, "101": 0.80, "102": 0.80,
+        "111": 0.04, "112": 0.20, "12": 5.0
+      }
+    },
+    {
+      "primaryCas": "91-64-5",
+      "name": "Coumarin",
+      "type": "restriction",
+      "reason": "Skin sensitization (QRA2)",
+      "limits": {
+        "1": 0.04, "2": 0.20, "3": 0.06, "4": 1.40,
+        "51": 0.20, "52": 0.20, "53": 0.20, "54": 0.04,
+        "6": 0.04, "71": 0.20, "72": 0.20,
+        "8": 0.20, "9": 0.20, "101": 1.00, "102": 1.00,
+        "111": 0.04, "112": 0.20, "12": 50.0
+      }
+    },
+    {
+      "primaryCas": "118-58-1",
+      "name": "Benzyl Salicylate",
+      "type": "restriction",
+      "reason": "Skin sensitization",
+      "limits": {
+        "1": 0.20, "2": 1.00, "3": 0.30, "4": 4.40,
+        "51": 1.00, "52": 1.00, "53": 1.00, "54": 0.20,
+        "6": 0.20, "71": 1.00, "72": 1.00,
+        "8": 1.00, "9": 1.00, "101": 4.00, "102": 4.00,
+        "111": 0.20, "112": 1.00, "12": 50.0
+      }
+    },
+    {
+      "primaryCas": "140-11-4",
+      "name": "Benzyl Acetate",
+      "type": "restriction",
+      "reason": "Specification — total benzyl alcohol/acetate group",
+      "limits": {
+        "1": 0.30, "2": 2.00, "3": 0.50, "4": 8.00,
+        "51": 2.00, "52": 2.00, "53": 2.00, "54": 0.30,
+        "6": 0.30, "71": 2.00, "72": 2.00,
+        "8": 2.00, "9": 2.00, "101": 8.00, "102": 8.00,
+        "111": 0.30, "112": 2.00, "12": 50.0
+      }
+    },
+    {
+      "primaryCas": "106-22-9",
+      "name": "Citronellol",
+      "type": "restriction",
+      "reason": "Skin sensitization",
+      "limits": {
+        "1": 0.16, "2": 0.80, "3": 0.24, "4": 4.00,
+        "51": 0.80, "52": 0.80, "53": 0.80, "54": 0.16,
+        "6": 0.16, "71": 0.80, "72": 0.80,
+        "8": 0.80, "9": 0.80, "101": 3.00, "102": 3.00,
+        "111": 0.16, "112": 0.80, "12": 50.0
+      }
+    },
+    {
+      "primaryCas": "106-24-1",
+      "name": "Geraniol",
+      "type": "restriction",
+      "reason": "Skin sensitization (QRA2)",
+      "limits": {
+        "1": 0.04, "2": 0.20, "3": 0.06, "4": 1.20,
+        "51": 0.20, "52": 0.20, "53": 0.20, "54": 0.04,
+        "6": 0.04, "71": 0.20, "72": 0.20,
+        "8": 0.20, "9": 0.20, "101": 1.00, "102": 1.00,
+        "111": 0.04, "112": 0.20, "12": 50.0
+      }
+    },
+    {
+      "primaryCas": "106-25-2",
+      "name": "Nerol",
+      "type": "restriction",
+      "reason": "Skin sensitization",
+      "limits": {
+        "1": 0.10, "2": 0.50, "3": 0.15, "4": 3.00,
+        "51": 0.50, "52": 0.50, "53": 0.50, "54": 0.10,
+        "6": 0.10, "71": 0.50, "72": 0.50,
+        "8": 0.50, "9": 0.50, "101": 2.00, "102": 2.00,
+        "111": 0.10, "112": 0.50, "12": 50.0
+      }
+    },
+    {
+      "primaryCas": "104-55-2",
+      "name": "Cinnamaldehyde",
+      "synonyms": ["Cinnamic Aldehyde"],
+      "type": "restriction",
+      "reason": "Skin sensitization (strong)",
+      "limits": {
+        "1": 0.005, "2": 0.030, "3": 0.008, "4": 0.050,
+        "51": 0.030, "52": 0.030, "53": 0.030, "54": 0.005,
+        "6": 0.005, "71": 0.030, "72": 0.030,
+        "8": 0.030, "9": 0.030, "101": 0.10, "102": 0.10,
+        "111": 0.005, "112": 0.030, "12": 5.0
+      }
+    },
+    {
+      "primaryCas": "134-20-3",
+      "name": "Methyl Anthranilate",
+      "type": "restriction",
+      "reason": "Photoxicity in leave-on products combined with terpene aldehydes",
+      "limits": {
+        "1": 0.10, "2": 0.20, "3": 0.30, "4": 0.50,
+        "51": 0.20, "52": 0.20, "53": 0.20, "54": 0.10,
+        "6": 0.10, "71": 0.20, "72": 0.20,
+        "8": 0.20, "9": 0.20, "101": 1.00, "102": 1.00,
+        "111": 0.10, "112": 0.20, "12": 5.0
+      }
+    },
+    {
+      "primaryCas": "93-15-2",
+      "name": "Methyl Eugenol",
+      "type": "restriction",
+      "reason": "Genotoxicity (TTC) — extremely tight limits",
+      "limits": {
+        "1": 0.0002, "2": 0.0002, "3": 0.0004, "4": 0.0020,
+        "51": 0.0002, "52": 0.0002, "53": 0.0002, "54": 0.0001,
+        "6": 0.0002, "71": 0.0010, "72": 0.0002,
+        "8": 0.0002, "9": 0.0010, "101": 0.0040, "102": 0.0010,
+        "111": 0.0001, "112": 0.0002, "12": 0.0040
+      }
+    },
+    {
+      "primaryCas": "140-67-0",
+      "name": "Estragole",
+      "synonyms": ["Methyl Chavicol"],
+      "type": "restriction",
+      "reason": "Genotoxicity (TTC)",
+      "limits": {
+        "1": 0.001, "2": 0.005, "3": 0.001, "4": 0.010,
+        "51": 0.005, "52": 0.005, "53": 0.005, "54": 0.001,
+        "6": 0.001, "71": 0.005, "72": 0.005,
+        "8": 0.005, "9": 0.005, "101": 0.020, "102": 0.020,
+        "111": 0.001, "112": 0.005, "12": 0.10
+      }
+    },
+    {
+      "primaryCas": "23696-85-7",
+      "name": "Damascenone",
+      "type": "restriction",
+      "reason": "Skin sensitization (QRA2)",
+      "limits": {
+        "1": 0.0008, "2": 0.0050, "3": 0.0010, "4": 0.020,
+        "51": 0.0050, "52": 0.0050, "53": 0.0050, "54": 0.0008,
+        "6": 0.0008, "71": 0.0050, "72": 0.0050,
+        "8": 0.0050, "9": 0.0050, "101": 0.020, "102": 0.020,
+        "111": 0.0008, "112": 0.0050, "12": 1.0
+      }
+    },
+    {
+      "primaryCas": "24720-09-0",
+      "name": "Damascone Alpha",
+      "type": "restriction",
+      "reason": "Skin sensitization (QRA2)",
+      "limits": {
+        "1": 0.0008, "2": 0.0050, "3": 0.0010, "4": 0.020,
+        "51": 0.0050, "52": 0.0050, "53": 0.0050, "54": 0.0008,
+        "6": 0.0008, "71": 0.0050, "72": 0.0050,
+        "8": 0.0050, "9": 0.0050, "101": 0.020, "102": 0.020,
+        "111": 0.0008, "112": 0.0050, "12": 1.0
+      }
+    },
+    {
+      "primaryCas": "23726-91-2",
+      "name": "Damascone Beta",
+      "type": "restriction",
+      "reason": "Skin sensitization (QRA2)",
+      "limits": {
+        "1": 0.0008, "2": 0.0050, "3": 0.0010, "4": 0.020,
+        "51": 0.0050, "52": 0.0050, "53": 0.0050, "54": 0.0008,
+        "6": 0.0008, "71": 0.0050, "72": 0.0050,
+        "8": 0.0050, "9": 0.0050, "101": 0.020, "102": 0.020,
+        "111": 0.0008, "112": 0.0050, "12": 1.0
+      }
+    },
+    {
+      "primaryCas": "16409-43-1",
+      "name": "Rose Oxide",
+      "type": "restriction",
+      "reason": "Skin sensitization",
+      "limits": {
+        "1": 0.05, "2": 0.30, "3": 0.07, "4": 1.00,
+        "51": 0.30, "52": 0.30, "53": 0.30, "54": 0.05,
+        "6": 0.05, "71": 0.30, "72": 0.30,
+        "8": 0.30, "9": 0.30, "101": 1.00, "102": 1.00,
+        "111": 0.05, "112": 0.30, "12": 25.0
+      }
+    },
+    {
+      "primaryCas": "127-41-3",
+      "name": "Alpha-Ionone",
+      "type": "restriction",
+      "reason": "Skin sensitization",
+      "limits": {
+        "1": 0.10, "2": 0.50, "3": 0.15, "4": 3.00,
+        "51": 0.50, "52": 0.50, "53": 0.50, "54": 0.10,
+        "6": 0.10, "71": 0.50, "72": 0.50,
+        "8": 0.50, "9": 0.50, "101": 2.00, "102": 2.00,
+        "111": 0.10, "112": 0.50, "12": 50.0
+      }
+    },
+    {
+      "primaryCas": "14901-07-6",
+      "name": "Beta-Ionone",
+      "type": "restriction",
+      "reason": "Skin sensitization",
+      "limits": {
+        "1": 0.10, "2": 0.50, "3": 0.15, "4": 3.00,
+        "51": 0.50, "52": 0.50, "53": 0.50, "54": 0.10,
+        "6": 0.10, "71": 0.50, "72": 0.50,
+        "8": 0.50, "9": 0.50, "101": 2.00, "102": 2.00,
+        "111": 0.10, "112": 0.50, "12": 50.0
+      }
+    },
+    {
+      "primaryCas": "120-72-9",
+      "name": "Indole",
+      "type": "restriction",
+      "reason": "Skin sensitization / discoloration potential",
+      "limits": {
+        "1": 0.001, "2": 0.005, "3": 0.001, "4": 0.030,
+        "51": 0.005, "52": 0.005, "53": 0.005, "54": 0.001,
+        "6": 0.001, "71": 0.005, "72": 0.005,
+        "8": 0.005, "9": 0.005, "101": 0.030, "102": 0.030,
+        "111": 0.001, "112": 0.005, "12": 1.0
+      }
+    },
+    {
+      "primaryCas": "123-11-5",
+      "name": "Anisic Aldehyde",
+      "synonyms": ["p-Methoxybenzaldehyde"],
+      "type": "restriction",
+      "reason": "Skin sensitization",
+      "limits": {
+        "1": 0.20, "2": 1.00, "3": 0.30, "4": 4.00,
+        "51": 1.00, "52": 1.00, "53": 1.00, "54": 0.20,
+        "6": 0.20, "71": 1.00, "72": 1.00,
+        "8": 1.00, "9": 1.00, "101": 3.00, "102": 3.00,
+        "111": 0.20, "112": 1.00, "12": 50.0
+      }
+    },
+    {
+      "primaryCas": "121-32-4",
+      "name": "Ethyl Vanillin",
+      "type": "restriction",
+      "reason": "Skin sensitization",
+      "limits": {
+        "1": 0.10, "2": 0.50, "3": 0.15, "4": 2.00,
+        "51": 0.50, "52": 0.50, "53": 0.50, "54": 0.10,
+        "6": 0.10, "71": 0.50, "72": 0.50,
+        "8": 0.50, "9": 0.50, "101": 2.00, "102": 2.00,
+        "111": 0.10, "112": 0.50, "12": 50.0
+      }
+    },
+    {
+      "primaryCas": "526-37-4",
+      "name": "Atranol",
+      "type": "prohibition",
+      "reason": "Strong skin sensitizer — present in oakmoss/treemoss extracts",
+      "limits": {
+        "1": null, "2": null, "3": null, "4": null,
+        "51": null, "52": null, "53": null, "54": null,
+        "6": null, "71": null, "72": null,
+        "8": null, "9": null, "101": null, "102": null,
+        "111": null, "112": null, "12": null
+      },
+      "prohibitedAll": true
+    },
+    {
+      "primaryCas": "57074-21-2",
+      "name": "Chloroatranol",
+      "type": "prohibition",
+      "reason": "Strong skin sensitizer — present in oakmoss/treemoss extracts",
+      "limits": {
+        "1": null, "2": null, "3": null, "4": null,
+        "51": null, "52": null, "53": null, "54": null,
+        "6": null, "71": null, "72": null,
+        "8": null, "9": null, "101": null, "102": null,
+        "111": null, "112": null, "12": null
+      },
+      "prohibitedAll": true
+    },
+    {
+      "primaryCas": "484-20-8",
+      "name": "Bergapten (5-Methoxypsoralen / Furocoumarins)",
+      "type": "restriction",
+      "reason": "Phototoxicity — limit on furocoumarins in leave-on skin products",
+      "limits": {
+        "1": null, "2": 0.0015, "3": 0.0015, "4": 0.0015,
+        "51": 0.0015, "52": 0.0015, "53": 0.0015, "54": 0.0015,
+        "6": null, "71": null, "72": 0.0015,
+        "8": null, "9": null, "101": null, "102": null,
+        "111": 0.0015, "112": 0.0015, "12": 50.0
+      }
+    },
+    {
+      "primaryCas": "5989-54-8",
+      "name": "Limonene (l-)",
+      "type": "restriction",
+      "reason": "Skin sensitization (peroxides)",
+      "limits": {
+        "1": 0.20, "2": 1.00, "3": 0.30, "4": 4.00,
+        "51": 1.00, "52": 1.00, "53": 1.00, "54": 0.20,
+        "6": 0.20, "71": 1.00, "72": 1.00,
+        "8": 1.00, "9": 1.00, "101": 4.00, "102": 4.00,
+        "111": 0.20, "112": 1.00, "12": 50.0
+      }
+    },
+    {
+      "primaryCas": "100-52-7",
+      "name": "Benzaldehyde",
+      "type": "specification",
+      "reason": "Specification: cyanide-free grade required",
+      "limits": {}
+    }
+  ]
+}
