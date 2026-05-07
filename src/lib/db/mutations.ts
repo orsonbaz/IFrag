@@ -65,8 +65,8 @@ export function forkTrial(db: DbAdapter, sourceTrialId: number): number {
       );
     newId = r.lastInsertRowid;
     db.prepare(
-      `INSERT INTO trial_components (trial_id, material_id, parts_per_1000, sort_order, note)
-       SELECT ?, material_id, parts_per_1000, sort_order, note FROM trial_components WHERE trial_id = ?`
+      `INSERT INTO trial_components (trial_id, material_id, parts_per_1000, sort_order, note, dilution_pct)
+       SELECT ?, material_id, parts_per_1000, sort_order, note, dilution_pct FROM trial_components WHERE trial_id = ?`
     ).run(newId, sourceTrialId);
   });
   return newId;
@@ -87,6 +87,7 @@ export interface TrialUpsertPayload {
     partsPer1000: number;
     sortOrder: number;
     note?: string | null;
+    dilutionPct?: number | null;
   }>;
 }
 
@@ -103,11 +104,18 @@ export function saveTrial(db: DbAdapter, trialId: number, payload: TrialUpsertPa
     );
     db.prepare('DELETE FROM trial_components WHERE trial_id = ?').run(trialId);
     const ins = db.prepare(
-      'INSERT INTO trial_components (trial_id, material_id, parts_per_1000, sort_order, note) VALUES (?, ?, ?, ?, ?)'
+      'INSERT INTO trial_components (trial_id, material_id, parts_per_1000, sort_order, note, dilution_pct) VALUES (?, ?, ?, ?, ?, ?)'
     );
     for (const c of payload.components) {
       if (!c.materialId) continue;
-      ins.run(trialId, c.materialId, c.partsPer1000, c.sortOrder ?? 0, c.note ?? null);
+      ins.run(
+        trialId,
+        c.materialId,
+        c.partsPer1000,
+        c.sortOrder ?? 0,
+        c.note ?? null,
+        c.dilutionPct ?? 100
+      );
     }
   });
 }

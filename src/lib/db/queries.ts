@@ -65,7 +65,8 @@ export function listTrialComponents(db: DbAdapter, trialId: number): TrialCompon
               tc.parts_per_1000 as partsPer1000, tc.sort_order as sortOrder, tc.note,
               m.name as materialName, m.cas, m.is_natural as isNatural,
               m.is_accord as isAccord, m.source_trial_id as sourceTrialId,
-              m.dilution_pct as dilutionPct, m.price_minor as priceMinor, m.currency
+              COALESCE(tc.dilution_pct, 100) as dilutionPct,
+              m.price_minor as priceMinor, m.currency
        FROM trial_components tc
        JOIN materials m ON m.id = tc.material_id
        WHERE tc.trial_id = ?
@@ -280,7 +281,7 @@ export function buildComponentInputs(db: DbAdapter, trialId: number): ComponentI
           `SELECT tc.id, tc.material_id as materialId, tc.parts_per_1000 as partsPer1000,
                   m.name as materialName, m.cas, m.is_natural as isNatural,
                   m.is_accord as isAccord, m.source_trial_id as sourceTrialId,
-                  m.dilution_pct as dilutionPct
+                  COALESCE(tc.dilution_pct, 100) as dilutionPct
            FROM trial_components tc
            JOIN materials m ON m.id = tc.material_id
            WHERE tc.trial_id = ?`

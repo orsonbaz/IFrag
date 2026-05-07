@@ -84,7 +84,7 @@
         partsPer1000: 0,
         sortOrder: rows.length,
         note: null,
-        dilutionPct: m.dilutionPct,
+        dilutionPct: 100,
         priceMinor: m.priceMinor,
         currency: m.currency
       }
@@ -117,7 +117,7 @@
           partsPer1000: remaining,
           sortOrder: rows.length,
           note: 'auto-balance',
-          dilutionPct: m.dilutionPct,
+          dilutionPct: 100,
           priceMinor: m.priceMinor,
           currency: m.currency
         }
@@ -167,6 +167,10 @@
   function toggleCat(n: number) {
     expandedCat = expandedCat === n ? null : n;
   }
+  let showAllCategories = false;
+  $: visibleCategories = showAllCategories
+    ? data.perCategory
+    : data.perCategory.filter((p) => p.category.number === targetCategoryNumber);
 
   $: targetVerdict = data.perCategory.find((p) => p.category.number === targetCategoryNumber);
 
@@ -203,7 +207,8 @@
           materialId: r.materialId,
           partsPer1000: r.partsPer1000,
           sortOrder: r.sortOrder,
-          note: r.note
+          note: r.note,
+          dilutionPct: r.dilutionPct
         }))
       });
       await invalidateAll();
@@ -370,9 +375,17 @@
                 </div>
                 <div class="flex items-center gap-2 text-xs text-ink-500">
                   {#if r.cas}<span>CAS {r.cas}</span>{/if}
-                  {#if r.dilutionPct < 100}
-                    <span class="badge badge-unknown">{r.dilutionPct}% dilution</span>
-                  {/if}
+                  <label class="inline-flex items-center gap-1" title="Dilution of this stock — 100 means pure">
+                    <input
+                      type="number"
+                      min="0.1"
+                      max="100"
+                      step="0.1"
+                      bind:value={r.dilutionPct}
+                      class="input text-xs w-14 px-1 py-0"
+                    />
+                    <span>% pure</span>
+                  </label>
                   {#if meta?.directStandards.length}
                     {#each meta.directStandards as s}
                       <span class="badge {s.type === 'prohibition' ? 'badge-fail' : s.type === 'restriction' ? 'badge-warn' : 'badge-unknown'}">
@@ -487,13 +500,22 @@
         {/if}
 
         <div class="border border-ink-200 rounded overflow-hidden">
-          <div class="bg-ink-50 px-3 py-1.5 text-xs uppercase font-semibold text-ink-600 grid grid-cols-12 gap-2">
+          <div class="bg-ink-50 px-3 py-1.5 text-xs uppercase font-semibold text-ink-600 grid grid-cols-12 gap-2 items-center">
             <span class="col-span-2">Cat</span>
             <span class="col-span-7">Label</span>
-            <span class="col-span-3 text-right">Status</span>
+            <span class="col-span-3 text-right">
+              <button
+                type="button"
+                class="text-xs font-medium normal-case text-ink-600 hover:text-ink-900 underline"
+                on:click={() => (showAllCategories = !showAllCategories)}
+                title={showAllCategories ? 'Show only the target category' : 'Show all IFRA categories'}
+              >
+                {showAllCategories ? 'show target only' : 'show all'}
+              </button>
+            </span>
           </div>
           <ul class="divide-y divide-ink-100">
-            {#each data.perCategory as p}
+            {#each visibleCategories as p}
               {@const isTarget = p.category.number === targetCategoryNumber}
               <li class={isTarget ? 'bg-accent-500/5' : ''}>
                 <button
