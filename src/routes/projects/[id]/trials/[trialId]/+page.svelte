@@ -396,11 +396,32 @@
                       on:click={() => addMaterial(m.id)}
                     >
                       <div class="flex items-center justify-between gap-2">
-                        <span class="truncate">{m.name}</span>
-                        <span class="text-xs text-ink-500 shrink-0">
-                          {#if m.isAccord}<span class="text-accent-600 font-medium">📦 accord</span>{:else if m.isNatural}natural{/if}
+                        <span class="truncate font-medium">{m.name}</span>
+                        <span class="text-xs text-ink-500 shrink-0 whitespace-nowrap">
+                          {#if m.priceMinor != null}{formatMoney(m.priceMinor, m.currency)}/kg{/if}
                         </span>
                       </div>
+                      <div class="flex flex-wrap gap-1 mt-0.5 text-xs">
+                        {#if m.isAccord}
+                          <span class="badge bg-accent-500/15 text-accent-600">📦 accord</span>
+                        {:else if m.isNatural}
+                          <span class="badge badge-unknown">natural</span>
+                        {/if}
+                        {#if m.volatility}
+                          <span class="badge badge-unknown">{m.volatility}</span>
+                        {/if}
+                        {#if m.dosageBand}
+                          <span
+                            class="badge {m.dosageBand.toLowerCase() === 'trace' ? 'badge-fail' : m.dosageBand.toLowerCase() === 'low' ? 'badge-warn' : 'badge-unknown'}"
+                            title="Typical dosage band"
+                          >
+                            {m.dosageBand}
+                          </span>
+                        {/if}
+                      </div>
+                      {#if m.usage}
+                        <div class="text-xs text-ink-500 mt-0.5 truncate" title={m.usage}>{m.usage}</div>
+                      {/if}
                       {#if m.cas}<div class="text-xs text-ink-400">CAS {m.cas}</div>{/if}
                     </button>
                   </li>

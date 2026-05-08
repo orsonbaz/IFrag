@@ -265,6 +265,7 @@ async function bootstrap(): Promise<DbAdapter> {
     runMigrations(_db);
     await persistNow();
   }
+  await runSeedPriceRepair(_adapter);
   // Persist on unload as a safety net.
   if (typeof window !== 'undefined') {
     window.addEventListener('beforeunload', () => {
@@ -274,6 +275,28 @@ async function bootstrap(): Promise<DbAdapter> {
     });
   }
   return _adapter;
+}
+
+async function runSeedPriceRepair(adapter: DbAdapter) {
+  // One-time repair: reset seed-material prices that were corrupted by the
+  // pre-v4 cents-per-gram rounding (€8/kg → 1 → migrated to 1000 = €10/kg).
+  // Gated by a marker column on settings so we only run it once.
+  let alreadyRepaired = false;
+  try {
+    const r = adapter
+      .prepare('SELECT seed_prices_repaired_at FROM settings WHERE id = 1')
+      .get() as { seed_prices_repaired_at: string | null } | undefined;
+    alreadyRepaired = !!r?.seed_prices_repaired_at;
+  } catch {
+    return; // Column missing → migration 5 hasn't run; nothing to do.
+  }
+  if (alreadyRepaired) return;
+  const { repairSeedPrices } = await import('./seed.js');
+  repairSeedPrices(adapter);
+  adapter
+    .prepare(`UPDATE settings SET seed_prices_repaired_at = datetime('now') WHERE id = 1`)
+    .run();
+  await persistNow();
 }
 
 function runMigrations(db: Database) {

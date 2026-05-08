@@ -56,6 +56,35 @@ export function isAlreadySeeded(db: DbAdapter): boolean {
   return r.c > 0;
 }
 
+/**
+ * Reset prices for materials that match a starter seed entry to the
+ * starter price. Needed because the price_minor → cents-per-kg migration
+ * preserved the rounded values from the old cents-per-gram unit, leaving
+ * cheap materials still at the wrong price (e.g. €8/kg seeded as 1, then
+ * migrated to 1000 = €10/kg). Matches by CAS first, then by exact name.
+ */
+export function repairSeedPrices(db: DbAdapter): { repaired: number } {
+  const materials = materialsStarter as MaterialSeed[];
+  const upd = db.prepare('UPDATE materials SET price_minor = ? WHERE id = ?');
+  const findByCas = db.prepare('SELECT id FROM materials WHERE cas = ? LIMIT 1');
+  const findByName = db.prepare('SELECT id FROM materials WHERE lower(name) = lower(?) LIMIT 1');
+  let repaired = 0;
+  db.transaction(() => {
+    for (const m of materials) {
+      if (typeof m.priceEurPerKg !== 'number') continue;
+      const priceMinor = Math.round(m.priceEurPerKg * 100);
+      let row: { id: number } | undefined;
+      if (m.cas) row = findByCas.get(m.cas) as { id: number } | undefined;
+      if (!row) row = findByName.get(m.name) as { id: number } | undefined;
+      if (row) {
+        upd.run(priceMinor, row.id);
+        repaired++;
+      }
+    }
+  });
+  return { repaired };
+}
+
 export function runSeed(db: DbAdapter, opts: { force?: boolean } = {}): { seededAmendmentId: number } {
   if (isAlreadySeeded(db) && !opts.force) {
     const active = db
