@@ -29,22 +29,51 @@
     dilutionPct: number;
     priceMinor: number | null;
     currency: string;
+    volatility: string | null;
+    dosageBand: string | null;
+    usage: string | null;
   };
 
-  let rows: Row[] = data.components.map((c) => ({
-    id: c.id,
-    materialId: c.materialId,
-    materialName: c.materialName,
-    cas: c.cas,
-    isNatural: !!c.isNatural,
-    isAccord: !!c.isAccord,
-    partsPer1000: c.partsPer1000,
-    sortOrder: c.sortOrder,
-    note: c.note,
-    dilutionPct: c.dilutionPct,
-    priceMinor: c.priceMinor,
-    currency: c.currency
-  }));
+  function rowFromMaterial(m: typeof data.materials[number], extras: Partial<Row> = {}): Row {
+    return {
+      materialId: m.id,
+      materialName: m.name,
+      cas: m.cas,
+      isNatural: !!m.isNatural,
+      isAccord: !!(m as any).isAccord,
+      partsPer1000: 0,
+      sortOrder: rows.length,
+      note: null,
+      dilutionPct: 100,
+      priceMinor: m.priceMinor,
+      currency: m.currency,
+      volatility: (m as any).volatility ?? null,
+      dosageBand: (m as any).dosageBand ?? null,
+      usage: (m as any).usage ?? null,
+      ...extras
+    };
+  }
+
+  let rows: Row[] = data.components.map((c) => {
+    const m = data.materials.find((x) => x.id === c.materialId);
+    return {
+      id: c.id,
+      materialId: c.materialId,
+      materialName: c.materialName,
+      cas: c.cas,
+      isNatural: !!c.isNatural,
+      isAccord: !!c.isAccord,
+      partsPer1000: c.partsPer1000,
+      sortOrder: c.sortOrder,
+      note: c.note,
+      dilutionPct: c.dilutionPct,
+      priceMinor: c.priceMinor,
+      currency: c.currency,
+      volatility: (m as any)?.volatility ?? null,
+      dosageBand: (m as any)?.dosageBand ?? null,
+      usage: (m as any)?.usage ?? null
+    };
+  });
 
   let compoundDosagePct = data.trial.compoundDosagePct;
   let targetCategoryNumber = data.trial.targetCategoryNumber ?? data.project.targetCategoryNumber ?? 4;
@@ -75,22 +104,7 @@
       materialPickerOpen = false;
       return;
     }
-    rows = [
-      ...rows,
-      {
-        materialId: m.id,
-        materialName: m.name,
-        cas: m.cas,
-        isNatural: !!m.isNatural,
-        isAccord: !!(m as any).isAccord,
-        partsPer1000: 0,
-        sortOrder: rows.length,
-        note: null,
-        dilutionPct: 100,
-        priceMinor: m.priceMinor,
-        currency: m.currency
-      }
-    ];
+    rows = [...rows, rowFromMaterial(m)];
     materialPickerOpen = false;
     materialPickerSearch = '';
   }
@@ -99,30 +113,24 @@
     rows = rows.filter((_, i) => i !== idx);
   }
 
+  function updateRow(idx: number, patch: Partial<Row>) {
+    rows = rows.map((r, i) => (i === idx ? { ...r, ...patch } : r));
+  }
+
   function balanceWith(materialId: number) {
     const remaining = 1000 - rows.reduce((s, r) => s + (r.partsPer1000 || 0), 0);
     if (remaining <= 0) return;
     const existing = rows.findIndex((r) => r.materialId === materialId);
     if (existing >= 0) {
-      rows = rows.map((r, i) => (i === existing ? { ...r, partsPer1000: r.partsPer1000 + remaining } : r));
+      rows = rows.map((r, i) =>
+        i === existing ? { ...r, partsPer1000: r.partsPer1000 + remaining } : r
+      );
     } else {
       const m = data.materials.find((x) => x.id === materialId);
       if (!m) return;
       rows = [
         ...rows,
-        {
-          materialId,
-          materialName: m.name,
-          cas: m.cas,
-          isNatural: !!m.isNatural,
-          isAccord: !!(m as any).isAccord,
-          partsPer1000: remaining,
-          sortOrder: rows.length,
-          note: 'auto-balance',
-          dilutionPct: 100,
-          priceMinor: m.priceMinor,
-          currency: m.currency
-        }
+        rowFromMaterial(m, { partsPer1000: remaining, note: 'auto-balance' })
       ];
     }
   }
@@ -133,11 +141,11 @@
     return ((r.partsPer1000 / 1000) * batchG).toFixed(3);
   }
 
-  function setRowDisplayValue(r: Row, v: number) {
-    if (displayUnit === 'pp1000') r.partsPer1000 = v;
-    else if (displayUnit === 'pct') r.partsPer1000 = v * 10;
-    else if (displayUnit === 'grams' && batchG > 0) r.partsPer1000 = (v / batchG) * 1000;
-    rows = rows;
+  function setRowDisplayValue(idx: number, v: number) {
+    let partsPer1000 = v;
+    if (displayUnit === 'pct') partsPer1000 = v * 10;
+    else if (displayUnit === 'grams' && batchG > 0) partsPer1000 = (v / batchG) * 1000;
+    updateRow(idx, { partsPer1000 });
   }
 
   function statusClass(s: string) {
@@ -446,15 +454,27 @@
             {@const rowKey = r.id ?? `new-${r.materialId}-${i}`}
             {@const directs = liveDirectStandardsByRowId.get(rowKey) ?? []}
             {@const annexCount = liveAnnexCountByRowId.get(rowKey) ?? 0}
+            {@const targetLimits = directs
+              .map((s: import('$lib/compliance/types').StandardRef) => ({
+                std: s,
+                limit: s.limits.get(targetCategoryNumber) ?? null
+              }))
+              .filter(
+                (x: { std: import('$lib/compliance/types').StandardRef; limit: import('$lib/compliance/types').StandardLimit | null }) =>
+                  x.limit && (x.limit.prohibited || x.limit.limitPct != null || x.limit.spec)
+              )}
             <tr class={rowTint(r, null, i)}>
               <td class="px-3 py-1.5">
-                <div class="font-medium text-sm flex items-center gap-1.5">
+                <div class="font-medium text-sm flex items-center gap-1.5 flex-wrap">
                   {#if r.isAccord}
                     <span class="badge bg-accent-500/15 text-accent-600" title="Accord — flattens into its constituents for compliance">📦 ACCORD</span>
                   {/if}
                   <span>{r.materialName}</span>
+                  {#if r.priceMinor != null}
+                    <span class="text-xs text-ink-500 font-normal" title="Material price">{formatMoney(r.priceMinor, r.currency)}/kg</span>
+                  {/if}
                 </div>
-                <div class="flex items-center gap-2 text-xs text-ink-500">
+                <div class="flex items-center gap-2 text-xs text-ink-500 flex-wrap mt-0.5">
                   {#if r.cas}<span>CAS {r.cas}</span>{/if}
                   <label class="inline-flex items-center gap-1" title="Dilution of this stock — 100 means pure">
                     <input
@@ -462,11 +482,23 @@
                       min="0.1"
                       max="100"
                       step="0.1"
-                      bind:value={r.dilutionPct}
+                      value={r.dilutionPct}
+                      on:input={(e) => updateRow(i, { dilutionPct: Number((e.currentTarget as HTMLInputElement).value) })}
                       class="input text-xs w-14 px-1 py-0"
                     />
                     <span>% pure</span>
                   </label>
+                  {#if r.volatility}
+                    <span class="badge badge-unknown" title="Volatility / note">{r.volatility}</span>
+                  {/if}
+                  {#if r.dosageBand}
+                    <span
+                      class="badge {r.dosageBand.toLowerCase() === 'trace' ? 'badge-fail' : r.dosageBand.toLowerCase() === 'low' ? 'badge-warn' : 'badge-unknown'}"
+                      title="Typical dosage band"
+                    >
+                      {r.dosageBand}
+                    </span>
+                  {/if}
                   {#if directs.length}
                     {#each directs as s}
                       <span class="badge {s.type === 'prohibition' ? 'badge-fail' : s.type === 'restriction' ? 'badge-warn' : 'badge-unknown'}">
@@ -478,28 +510,49 @@
                     <span class="badge badge-unknown">{annexCount} annex constituent{annexCount === 1 ? '' : 's'}</span>
                   {/if}
                 </div>
+                {#if r.usage}
+                  <div class="text-xs text-ink-400 mt-0.5">{r.usage}</div>
+                {/if}
+                {#if targetLimits.length}
+                  <div class="text-xs text-ink-500 mt-0.5">
+                    {#each targetLimits as t}
+                      <div>
+                        <span class="font-mono text-ink-700">Cat {targetCategoryNumber}</span>:
+                        {#if t.limit?.prohibited}
+                          <span class="text-red-600 font-medium">prohibited</span>
+                        {:else if t.limit?.limitPct != null}
+                          limit <span class="font-mono">{formatPct(t.limit.limitPct)}</span> in product
+                        {:else if t.limit?.spec}
+                          spec — {t.limit.spec}
+                        {/if}
+                        <span class="text-ink-400">({t.std.name})</span>
+                      </div>
+                    {/each}
+                  </div>
+                {/if}
               </td>
-              <td class="px-3 py-1.5 text-right">
+              <td class="px-3 py-1.5 text-right align-top">
                 <input
                   type="number"
                   step="0.01"
                   min="0"
                   class="input text-right w-24"
                   value={rowDisplayValue(r)}
-                  on:input={(e) => setRowDisplayValue(r, Number((e.currentTarget as HTMLInputElement).value))}
+                  on:input={(e) => setRowDisplayValue(i, Number((e.currentTarget as HTMLInputElement).value))}
                 />
               </td>
-              <td class="px-3 py-1.5 text-right text-sm text-ink-600">
+              <td class="px-3 py-1.5 text-right text-sm text-ink-600 align-top">
                 {formatMoney(r.priceMinor != null ? Math.round((r.partsPer1000 / 1000) * (batchG / 1000) * r.priceMinor) : null, r.currency)}
               </td>
-              <td class="px-3 py-1.5">
+              <td class="px-3 py-1.5 align-top">
                 <input
-                  bind:value={r.note}
+                  value={r.note ?? ''}
+                  on:input={(e) => updateRow(i, { note: (e.currentTarget as HTMLInputElement).value })}
                   class="input text-xs"
                   placeholder="—"
                 />
               </td>
-              <td class="px-3 py-1.5 text-right">
+              <td class="px-3 py-1.5 text-right align-top">
                 <button
                   class="text-xs text-ink-500 hover:text-red-600"
                   on:click={() => removeRow(i)}
